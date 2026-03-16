@@ -1,6 +1,7 @@
 # Exclude from CodeCommit
 CLAUDE.md
 setup-guide/cicd-instructor-guide.docx
+~$*
 
 # macOS
 .DS_Store
