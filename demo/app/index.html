@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CI/CD Demo App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .badge {
+      background: #238636;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+    .subtitle {
+      color: #8b949e;
+      font-size: 1.1rem;
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+    }
+    .stage {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+      min-width: 110px;
+    }
+    .stage .icon { font-size: 1.4rem; }
+    .stage .label { font-size: 0.8rem; color: #8b949e; margin-top: 4px; }
+    .stage .name { font-size: 0.9rem; font-weight: 600; }
+    .arrow { color: #238636; font-size: 1.2rem; }
+    .info {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.25rem 2rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #8b949e;
+    }
+    .info strong { color: #e6edf3; }
+  </style>
+</head>
+<body>
+
+  <div class="badge">✅ Deployed via AWS CI/CD</div>
+
+  <h1>Make your hands dirty, keep learning!</h1>
+  <p class="subtitle">This page was deployed automatically by CodePipeline</p>
+
+  <div class="pipeline">
+    <div class="stage">
+      <div class="icon">📦</div>
+      <div class="name">CodeCommit</div>
+      <div class="label">Source</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">🔨</div>
+      <div class="name">CodeBuild</div>
+      <div class="label">Build</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">🚀</div>
+      <div class="name">CodeDeploy</div>
+      <div class="label">Deploy</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">🖥️</div>
+      <div class="name">EC2</div>
+      <div class="label">Running</div>
+    </div>
+  </div>
+
+  <div class="info">
+    <strong>To trigger the pipeline:</strong> change the heading above, commit, and push to CodeCommit.<br/>
+    Watch the pipeline run live in the AWS Console.
+  </div>
+
+</body>
+</html>

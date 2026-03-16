@@ -1,0 +1,35 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo "Installing dependencies..."
+      # Add dependency install commands here, e.g.:
+      # - npm install
+
+  pre_build:
+    commands:
+      - echo "Running pre-build checks..."
+      # Security scan, lint, unit tests, etc.
+      # - npm run lint
+      # - npm test
+
+  build:
+    commands:
+      - echo "Build started on `date`"
+      - echo "Packaging application..."
+      # Add build commands here, e.g.:
+      # - npm run build
+
+  post_build:
+    commands:
+      - echo "Build completed on `date`"
+
+artifacts:
+  files:
+    - app/index.html
+    - appspec.yml
+    - scripts/**/*
+  discard-paths: no

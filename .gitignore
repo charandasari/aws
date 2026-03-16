@@ -1,0 +1,7 @@
+# Exclude from CodeCommit
+diagrams/
+presentation/
+setup-guide/
+
+# macOS
+.DS_Store
