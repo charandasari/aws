@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CI/CD in AWS — Charan Dasari</title>
+<style>
+/* ── Variables ── */
+:root {
+  --bg:     #f6f8fa;
+  --surface:#ffffff;
+  --surface2:#f0f2f5;
+  --border: #d0d7de;
+  --border2:#e1e4e8;
+  --text:   #1c2128;
+  --muted:  #57606a;
+  --muted2: #8c959f;
+  --green:  #1a7f37;
+  --gl:     #1a7f37;
+  --blue:   #0550ae;
+  --bl:     #0550ae;
+  --orange: #9a6700;
+  --ol:     #9a6700;
+  --purple: #6639ba;
+  --pl:     #6639ba;
+  --red:    #cf222e;
+  --rl:     #cf222e;
+  --teal:   #0e7490;
+  --tl:     #0e7490;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+
+/* ── Progress bar ── */
+#progress{position:fixed;top:0;left:0;height:3px;background:var(--gl);
+  transition:width .35s ease;z-index:300;}
+
+/* ── Slide label ── */
+#slide-label{position:fixed;top:1rem;right:1.5rem;font-size:.7rem;color:var(--muted2);
+  letter-spacing:.08em;text-transform:uppercase;z-index:200;}
+
+/* ── Section tag (top left) ── */
+#section-tag{position:fixed;top:1rem;left:1.5rem;font-size:.7rem;color:var(--muted2);
+  letter-spacing:.08em;text-transform:uppercase;z-index:200;}
+
+/* ── Nav ── */
+.nav{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:.75rem;z-index:200;
+  background:rgba(255,255,255,.95);border:1px solid var(--border);
+  border-radius:40px;padding:.4rem 1rem;backdrop-filter:blur(8px);
+  box-shadow:0 2px 12px rgba(0,0,0,.1);}
+.nav button{background:none;border:none;color:var(--text);font-size:1.1rem;
+  cursor:pointer;padding:4px 10px;border-radius:6px;transition:background .15s;}
+.nav button:hover{background:var(--border2);}
+.nav .ctr{font-size:.8rem;color:var(--muted);min-width:52px;text-align:center;}
+
+/* ── Deck / Slide ── */
+.deck{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:3rem 5rem;text-align:center;
+  overflow:hidden;}
+.slide.active{display:flex;}
+.slide.left{align-items:flex-start;text-align:left;}
+
+/* ── Typography ── */
+h1{font-size:3rem;font-weight:800;line-height:1.15;margin-bottom:.75rem;}
+h2{font-size:1.9rem;font-weight:700;margin-bottom:1.25rem;line-height:1.2;}
+h3{font-size:1.1rem;font-weight:600;margin-bottom:.4rem;}
+p{font-size:.95rem;color:var(--muted);line-height:1.65;max-width:740px;}
+.big{font-size:1.2rem;color:var(--text);max-width:820px;line-height:1.7;}
+.sub{font-size:1rem;color:var(--muted);max-width:700px;line-height:1.6;margin-top:.5rem;}
+code{font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:.87em;
+  background:#e8edf2;border:1px solid var(--border);
+  border-radius:4px;padding:1px 5px;color:var(--bl);}
+.hl{color:var(--gl);}
+.hl-b{color:var(--bl);}
+.hl-o{color:var(--ol);}
+.hl-p{color:var(--pl);}
+.hl-r{color:var(--rl);}
+
+/* ── Badge / Pill ── */
+.badge{display:inline-flex;align-items:center;gap:.4rem;padding:4px 14px;
+  border-radius:20px;font-size:.72rem;font-weight:600;letter-spacing:.06em;
+  margin-bottom:1.25rem;}
+.g{background:rgba(26,127,55,.12);color:var(--gl);border:1px solid rgba(26,127,55,.4);}
+.b{background:rgba(5,80,174,.1);color:var(--bl);border:1px solid rgba(5,80,174,.35);}
+.o{background:rgba(154,103,0,.1);color:var(--ol);border:1px solid rgba(154,103,0,.35);}
+.p{background:rgba(102,57,186,.1);color:var(--pl);border:1px solid rgba(102,57,186,.35);}
+.r{background:rgba(207,34,46,.1);color:var(--rl);border:1px solid rgba(207,34,46,.35);}
+
+/* ── Code block ── */
+pre{background:#f0f2f5;border:1px solid var(--border);border-radius:10px;
+  padding:1.1rem 1.4rem;text-align:left;
+  font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:.8rem;
+  line-height:1.65;max-width:900px;width:100%;overflow-x:auto;tab-size:2;
+  color:var(--text);}
+pre .k{color:#cf222e;}     /* keywords */
+pre .kw{color:#6639ba;}    /* yaml keys */
+pre .v{color:#0550ae;}     /* values */
+pre .s{color:#1a7f37;}     /* strings */
+pre .c{color:#8c959f;font-style:italic;} /* comments */
+pre .n{color:#9a6700;}     /* numbers */
+pre .cmd{color:#1a7f37;}   /* shell commands */
+pre .dollar{color:#8c959f;}
+pre .out{color:#57606a;}
+
+/* ── Terminal mockup ── */
+.terminal{background:#f0f2f5;border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;max-width:860px;width:100%;}
+.term-bar{background:#e1e4e8;padding:.45rem .8rem;display:flex;align-items:center;gap:.5rem;}
+.term-dot{width:12px;height:12px;border-radius:50%;}
+.t-r{background:#ff5f56;} .t-y{background:#ffbd2e;} .t-g{background:#27c93f;}
+.term-title{font-size:.72rem;color:var(--muted);margin-left:.5rem;font-family:monospace;}
+.term-body{padding:1rem 1.25rem;font-family:'SF Mono','Fira Code',Consolas,monospace;
+  font-size:.8rem;line-height:1.7;color:var(--text);}
+
+/* ── Pipeline visual ── */
+.pipeline{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center;
+  margin:1.25rem 0;}
+.pstage{background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:.8rem 1.1rem;text-align:center;min-width:105px;cursor:default;
+  transition:border-color .2s,transform .2s;}
+.pstage:hover{transform:translateY(-2px);}
+.pstage .icon{font-size:1.4rem;}
+.pstage .nm{font-size:.85rem;font-weight:600;margin-top:3px;}
+.pstage .sb{font-size:.68rem;color:var(--muted);}
+.arr{color:var(--gl);font-size:1.3rem;flex-shrink:0;}
+
+/* ── Two-column ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;width:100%;max-width:920px;text-align:left;}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;width:100%;max-width:960px;text-align:left;}
+
+/* ── Card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:1.1rem 1rem;}
+.card .icon{font-size:1.6rem;margin-bottom:.4rem;}
+.card h3{font-size:.95rem;margin-bottom:.25rem;}
+.card p{font-size:.82rem;color:var(--muted);}
+.card .tag{font-size:.68rem;color:var(--gl);font-weight:600;margin-bottom:.4rem;display:block;
+  text-transform:uppercase;letter-spacing:.06em;}
+.card.b-b{border-color:var(--blue);}
+.card.b-g{border-color:var(--green);}
+.card.b-o{border-color:var(--orange);}
+.card.b-p{border-color:var(--purple);}
+.card.b-r{border-color:var(--red);}
+
+/* ── Table ── */
+table{border-collapse:collapse;width:100%;max-width:900px;font-size:.85rem;margin-top:.75rem;}
+th{background:#e8edf2;color:var(--muted);padding:.55rem .9rem;text-align:left;
+  border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;}
+td{padding:.65rem .9rem;border-bottom:1px solid var(--border2);vertical-align:top;line-height:1.5;}
+tr:last-child td{border-bottom:none;}
+td:first-child{color:var(--gl);font-weight:600;white-space:nowrap;}
+td code{font-size:.8em;}
+
+/* ── Checklist ── */
+.list{list-style:none;text-align:left;max-width:780px;width:100%;}
+.list li{padding:.4rem 0;font-size:.9rem;color:var(--muted);display:flex;align-items:flex-start;gap:.7rem;line-height:1.5;}
+.list li .dot{color:var(--gl);font-weight:700;flex-shrink:0;margin-top:1px;}
+.list li strong{color:var(--text);}
+.list.sm li{font-size:.82rem;padding:.3rem 0;}
+
+/* ── Info box ── */
+.info-box{border-radius:10px;padding:1rem 1.25rem;max-width:800px;width:100%;text-align:left;margin:.75rem 0;}
+.info-box p{font-size:.88rem;line-height:1.6;}
+.info-box .label{font-size:.7rem;font-weight:600;letter-spacing:.07em;margin-bottom:.4rem;}
+.box-r{background:#fff0f0;border:1px solid rgba(207,34,46,.25);}
+.box-r .label{color:var(--rl);}
+.box-r p{color:var(--text);}
+.box-g{background:#f0fff4;border:1px solid rgba(26,127,55,.25);}
+.box-g .label{color:var(--gl);}
+.box-g p{color:var(--text);}
+.box-b{background:#f0f6ff;border:1px solid rgba(5,80,174,.2);}
+.box-b .label{color:var(--bl);}
+.box-b p{color:var(--text);}
+.box-o{background:#fffbf0;border:1px solid rgba(154,103,0,.25);}
+.box-o .label{color:var(--ol);}
+.box-o p{color:var(--text);}
+
+/* ── Step list ── */
+.steps{counter-reset:step;list-style:none;text-align:left;max-width:780px;width:100%;}
+.steps li{counter-increment:step;padding:.5rem 0 .5rem 2.5rem;position:relative;font-size:.88rem;color:var(--muted);line-height:1.55;}
+.steps li::before{content:counter(step);position:absolute;left:0;top:.45rem;
+  width:20px;height:20px;background:var(--green);color:#fff;border-radius:50%;
+  font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.steps li strong{color:var(--text);}
+
+/* ── Divider ── */
+.divider{width:60px;height:2px;background:var(--green);margin:.75rem auto;border-radius:2px;}
+
+/* ── Stat ── */
+.stats{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin:1rem 0;}
+.stat{text-align:center;}
+.stat .num{font-size:2.2rem;font-weight:800;color:var(--gl);}
+.stat .lbl{font-size:.75rem;color:var(--muted);margin-top:.2rem;}
+
+/* ── Quote ── */
+.quote{border-left:3px solid var(--gl);padding:.6rem 1.25rem;text-align:left;
+  max-width:700px;margin:.75rem 0;}
+.quote p{color:var(--text);font-size:1.05rem;font-style:italic;line-height:1.6;}
+.quote .attr{font-size:.78rem;color:var(--muted);margin-top:.4rem;font-style:normal;}
+
+/* ── Lifecycle hook row ── */
+.hook-row{display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;
+  border-radius:8px;background:var(--surface);border:1px solid var(--border);margin:.3rem 0;}
+.hook-row .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.hook-row .name{font-weight:600;font-size:.85rem;min-width:160px;font-family:monospace;}
+.hook-row .desc{font-size:.82rem;color:var(--muted);}
+
+/* ── Title slide ── */
+.author-bar{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;
+  margin-top:2rem;font-size:.82rem;color:var(--muted);}
+.author-bar span strong{color:var(--text);}
+.author-bar .sep{color:var(--border);}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="slide-label"></div>
+<div id="section-tag"></div>
+
+<div class="deck" id="deck">
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Title" data-section="">
+  <div class="badge g">▶ 60-Minute Technical Talk · Hands-On</div>
+  <h1>CI/CD on AWS</h1>
+  <div class="divider"></div>
+  <p class="big">Stop deploying manually. Start shipping confidently.<br/>
+  A complete walkthrough of CodeCommit, CodeBuild, CodeDeploy, and CodePipeline — with a live demo.</p>
+  <div class="author-bar">
+    <span><strong>Charan Dasari</strong></span>
+    <span class="sep">|</span>
+    <span>Senior Terraform Developer · BofA</span>
+    <span class="sep">|</span>
+    <span></span>
+    <span class="sep">|</span>
+    <span>AWS · Terraform · FastAPI · Next.js</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2 — AGENDA
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Agenda" data-section="">
+  <div class="badge b">Today's Agenda</div>
+  <h2>60 Minutes. 5 Sections.</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Section</th><th>Format</th></tr></thead>
+    <tbody>
+      <tr><td>0–8 min</td><td>The Problem — why manual deployments break</td><td>Story</td></tr>
+      <tr><td>8–15 min</td><td>CI/CD Mental Model — the 4-stage pipeline</td><td>Concepts</td></tr>
+      <tr><td>15–30 min</td><td>AWS Services — deep dive into each tool</td><td>Demo walk</td></tr>
+      <tr><td>30–52 min</td><td>Hands-On Demo — live pipeline trigger on EC2</td><td>Live demo</td></tr>
+      <tr><td>52–60 min</td><td>Best Practices + Q&A</td><td>Discussion</td></tr>
+    </tbody>
+  </table>
+  <div class="info-box box-g" style="margin-top:1rem">
+    <p>By the end of this session you'll understand exactly how CodeCommit, CodeBuild, CodeDeploy, and CodePipeline fit together — and you'll have a step-by-step setup guide to build this yourself.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3 — THE INCIDENT
+══════════════════════════════════════════ -->
+<div class="slide" data-label="The Incident" data-section="Section 1 · The Problem">
+  <div class="badge r">Section 1 · 0–8 min</div>
+  <h2>The Day the Deploy Broke Production</h2>
+  <div class="info-box box-r">
+    <div class="label">⚠ Real-World Incident</div>
+    <p>A developer SSHed into the production EC2 server. Ran the deploy script manually.
+    "Just this once" — they skipped the automated security scan to save time.
+    A vulnerable npm dependency shipped to production.
+    Three days later the security team flagged it. Emergency rollback.
+    Incident report. Customer notification. Four engineers pulled off sprint work to fix it.</p>
+  </div>
+  <div class="info-box box-o" style="margin-top:.5rem">
+    <div class="label">💡 The Root Cause</div>
+    <p>The deployment process lived in one engineer's head. There was no automation, no audit trail, no rollback mechanism, and no enforced quality gate. One shortcut created a four-day incident.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4 — MANUAL DEPLOYMENT PROBLEMS
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Manual Deployment Problems" data-section="Section 1 · The Problem">
+  <div class="badge r">Section 1 · Continued</div>
+  <h2>What Manual Deployments Actually Cost You</h2>
+  <div class="two">
+    <div>
+      <div class="info-box box-r">
+        <div class="label">❌ The Manual Way</div>
+        <ul class="list sm">
+          <li><span class="dot">×</span><span>SSH into server. Run a script. Hope it works.</span></li>
+          <li><span class="dot">×</span><span>Tests are optional. Security scans get skipped "just this once"</span></li>
+          <li><span class="dot">×</span><span>No rollback — redeploy manually and pray</span></li>
+          <li><span class="dot">×</span><span>No audit trail — who deployed? What changed? When?</span></li>
+          <li><span class="dot">×</span><span>"It works on my laptop" — but prod is different</span></li>
+          <li><span class="dot">×</span><span>Fear of Friday deploys. Team holds back changes all week.</span></li>
+          <li><span class="dot">×</span><span>Bus factor of 1 — only one person knows the deploy steps</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-g">
+        <div class="label">✅ With CI/CD on AWS</div>
+        <ul class="list sm">
+          <li><span class="dot">✓</span><span><strong>git push triggers everything</strong> — no manual steps</span></li>
+          <li><span class="dot">✓</span><span>Build and test run on every commit, automatically</span></li>
+          <li><span class="dot">✓</span><span>Failed test = pipeline stops. Nothing ships.</span></li>
+          <li><span class="dot">✓</span><span>Full audit trail in CodePipeline — every run, every artifact</span></li>
+          <li><span class="dot">✓</span><span>Rollback is one click in CodeDeploy</span></li>
+          <li><span class="dot">✓</span><span>Deploy any day, any time — the pipeline handles it</span></li>
+          <li><span class="dot">✓</span><span>New team member? The pipeline is the documentation</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5 — CI/CD MENTAL MODEL
+══════════════════════════════════════════ -->
+<div class="slide" data-label="CI/CD Mental Model" data-section="Section 2 · Mental Model">
+  <div class="badge b">Section 2 · 8–15 min</div>
+  <h2>The CI/CD Mental Model</h2>
+  <table>
+    <thead><tr><th>Term</th><th>What It Means</th><th>Who Approves the Deploy?</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>CI — Continuous Integration</td>
+        <td>Every commit triggers an automated build + test run. Catch issues early — before they reach prod.</td>
+        <td>Human — always</td>
+      </tr>
+      <tr>
+        <td>CD — Continuous Delivery</td>
+        <td>Tested code is always in a deployable state. The pipeline gets it ready. A human clicks "deploy."</td>
+        <td>Human — for prod</td>
+      </tr>
+      <tr>
+        <td>CD — Continuous Deployment</td>
+        <td>Fully automated end-to-end. Passing pipeline = shipped to prod. Zero human gate.</td>
+        <td>No one — fully automated</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="info-box box-b" style="margin-top:.75rem">
+    <div class="label">📌 What We're Building Today</div>
+    <p>We're building <strong>Continuous Delivery</strong> — a pipeline that automatically builds, tests, and deploys to EC2. We'll add a manual approval gate before production. That's the enterprise-safe pattern.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6 — 4-STAGE PIPELINE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="The 4-Stage Pipeline" data-section="Section 2 · Mental Model">
+  <div class="badge b">Section 2 · Continued</div>
+  <h2>The 4-Stage Pipeline</h2>
+  <div class="pipeline">
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">📦</div>
+      <div class="nm">Source</div>
+      <div class="sb">Code change triggers</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)">
+      <div class="icon">🔨</div>
+      <div class="nm">Build</div>
+      <div class="sb">Compile · package</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">🧪</div>
+      <div class="nm">Test</div>
+      <div class="sb">Unit · security · lint</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--purple)">
+      <div class="icon">🚀</div>
+      <div class="nm">Deploy</div>
+      <div class="sb">Ship to target</div>
+    </div>
+  </div>
+  <div class="two" style="margin-top:.5rem">
+    <div class="info-box box-r">
+      <div class="label">⛔ Stage Fails → Pipeline Stops</div>
+      <p>Each stage is a gate. Tests fail? Nothing ships. Build fails? Nothing ships. The pipeline enforces quality — even when humans are in a hurry.</p>
+    </div>
+    <div class="info-box box-g">
+      <div class="label">📦 Artifacts Flow Between Stages</div>
+      <p>Each stage produces an artifact stored in S3. The next stage picks it up. This means stages can run independently and are fully auditable.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7 — WHY AWS NATIVE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Why AWS Native" data-section="Section 2 · Mental Model">
+  <div class="badge b">Section 2 · Why AWS</div>
+  <h2>Why Use AWS-Native CI/CD?</h2>
+  <table>
+    <thead><tr><th>Tool</th><th>Strengths</th><th>When to Use</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>AWS CodePipeline<br/>+ CodeBuild</td>
+        <td>Native IAM auth, no external credentials to manage. Tight integration with S3, ECR, Lambda, EC2.</td>
+        <td>Teams already on AWS. Enterprise compliance. Need IAM + CloudTrail audit.</td>
+      </tr>
+      <tr>
+        <td>GitHub Actions</td>
+        <td>Huge marketplace of actions. Easy to use. Free for public repos.</td>
+        <td>GitHub-first teams. Cross-cloud. OSS projects.</td>
+      </tr>
+      <tr>
+        <td>Jenkins</td>
+        <td>Fully customizable. Huge plugin ecosystem. Self-hosted.</td>
+        <td>Complex pipelines. Legacy infra. Full control needed.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="info-box box-g" style="margin-top:.75rem">
+    <div class="label">💡 At Bank of America — We Use AWS Native</div>
+    <p>IAM integration is non-negotiable at enterprise scale. No third-party tool touching prod credentials. CloudTrail logs every pipeline action. CodePipeline + CodeBuild is the right call when you're running everything in AWS.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8 — ARCHITECTURE OVERVIEW
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Architecture" data-section="Section 3 · AWS Services">
+  <div class="badge o">Section 3 · 15–30 min</div>
+  <h2>The Full Architecture</h2>
+  <div class="pipeline" style="margin:1.25rem 0">
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">👨‍💻</div>
+      <div class="nm">Developer</div>
+      <div class="sb">git push</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">📦</div>
+      <div class="nm">CodeCommit</div>
+      <div class="sb">Git repo · Source</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--purple)">
+      <div class="icon">⚙️</div>
+      <div class="nm">CodePipeline</div>
+      <div class="sb">Orchestrator</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)">
+      <div class="icon">🔨</div>
+      <div class="nm">CodeBuild</div>
+      <div class="sb">Build · test</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">🗄️</div>
+      <div class="nm">S3 Bucket</div>
+      <div class="sb">Artifact store</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">🚀</div>
+      <div class="nm">CodeDeploy</div>
+      <div class="sb">Deploy to EC2</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--gl)">
+      <div class="icon">🖥️</div>
+      <div class="nm">EC2</div>
+      <div class="sb">Running app</div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Service</th><th>Role</th><th>Key Config</th></tr></thead>
+    <tbody>
+      <tr><td>CodeCommit</td><td>Git repository. Pipeline trigger on branch push.</td><td>Branch rule</td></tr>
+      <tr><td>CodePipeline</td><td>Orchestrates stages. Passes artifacts via S3. Enforces gates.</td><td>Pipeline config</td></tr>
+      <tr><td>CodeBuild</td><td>Compiles code, runs tests, packages artifact into .zip.</td><td><code>buildspec.yml</code></td></tr>
+      <tr><td>CodeDeploy</td><td>Downloads artifact from S3. Copies files to EC2. Runs lifecycle hooks.</td><td><code>appspec.yml</code></td></tr>
+      <tr><td>EC2</td><td>Runs the application. Apache serves <code>index.html</code>.</td><td>IAM instance profile</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 9 — CODECOMMIT DEEP DIVE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="CodeCommit" data-section="Section 3 · AWS Services">
+  <div class="badge b">Section 3 · CodeCommit</div>
+  <h2>CodeCommit — Your AWS-Native Git</h2>
+  <div class="two">
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Fully managed Git repository</strong> — no servers to run, no GitHub billing surprises</span></li>
+        <li><span class="dot">▸</span><span><strong>IAM-authenticated</strong> — HTTPS with Git credentials OR SSH with IAM key pair. No OAuth tokens.</span></li>
+        <li><span class="dot">▸</span><span><strong>Encrypted at rest and in transit</strong> — automatically, no config needed</span></li>
+        <li><span class="dot">▸</span><span><strong>CloudTrail integration</strong> — every push, pull, clone is logged. Audit-ready.</span></li>
+        <li><span class="dot">▸</span><span><strong>Triggers and notifications</strong> — push events can trigger Lambda, SNS, CodePipeline</span></li>
+        <li><span class="dot">▸</span><span><strong>Branch protection</strong> — approval rule templates to enforce PR reviews before merge</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="terminal">
+        <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">bash</span></div>
+        <div class="term-body">
+          <span class="dollar">$ </span><span class="cmd">aws codecommit create-repository \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">--repository-name demo-app \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">--region us-east-1</span><br/><br/>
+          <span class="dollar">$ </span><span class="cmd">git clone \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">https://git-codecommit.us-east-1</span><br/>
+          &nbsp;&nbsp;<span class="cmd">.amazonaws.com/v1/repos/demo-app</span><br/><br/>
+          <span class="dollar">$ </span><span class="cmd">git add .</span><br/>
+          <span class="dollar">$ </span><span class="cmd">git commit -m "Initial commit"</span><br/>
+          <span class="dollar">$ </span><span class="cmd">git push origin main</span><br/>
+          <span class="out">Counting objects: 12...</span><br/>
+          <span class="out">To https://git-codecommit...</span><br/>
+          <span class="s"> * [new branch]  main → main</span>
+        </div>
+      </div>
+      <div class="info-box box-b" style="margin-top:.75rem">
+        <div class="label">📌 Auth: HTTPS Git Credentials</div>
+        <p>IAM Console → your user → Security credentials → <em>HTTPS Git credentials for AWS CodeCommit</em> → Generate credentials. Username + password. That's it.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 10 — CODEBUILD DEEP DIVE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="CodeBuild" data-section="Section 3 · AWS Services">
+  <div class="badge g">Section 3 · CodeBuild</div>
+  <h2>CodeBuild — Managed Build Service</h2>
+  <div class="two">
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Fully managed</strong> — no build servers to provision, patch, or scale</span></li>
+        <li><span class="dot">▸</span><span><strong>Runs your buildspec.yml</strong> — 4 phases: install → pre_build → build → post_build</span></li>
+        <li><span class="dot">▸</span><span><strong>Managed environments</strong> — Amazon Linux 2, Ubuntu, Windows; multiple runtimes (Node, Python, Java, Go...)</span></li>
+        <li><span class="dot">▸</span><span><strong>Pay per build minute</strong> — no idle costs. First 100 build-minutes/month free.</span></li>
+        <li><span class="dot">▸</span><span><strong>CloudWatch Logs</strong> — every build log line is stored and searchable</span></li>
+        <li><span class="dot">▸</span><span><strong>Environment variables</strong> — inject secrets from SSM Parameter Store or Secrets Manager at build time</span></li>
+        <li><span class="dot">▸</span><span><strong>VPC support</strong> — build inside your VPC to access private resources</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="info-box box-g">
+        <div class="label">📦 What CodeBuild Produces</div>
+        <p>A deployment artifact — a <code>.zip</code> file containing your app files, <code>appspec.yml</code>, and scripts. This artifact is uploaded to S3. CodeDeploy downloads it from there.</p>
+      </div>
+      <div class="info-box box-o" style="margin-top:.5rem">
+        <div class="label">⚡ Build Environments (Standard)</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">▸</span><span><code>aws/codebuild/standard:7.0</code> — Node 18, Python 3.11, Java 17, Go 1.21</span></li>
+          <li><span class="dot">▸</span><span><code>aws/codebuild/amazonlinux2-x86_64-standard:5.0</code> — AL2 with AWS CLI pre-installed</span></li>
+        </ul>
+      </div>
+      <div class="info-box box-b" style="margin-top:.5rem">
+        <div class="label">💰 Pricing</div>
+        <p><code>build.general1.small</code> = $0.005/min. A typical 2-minute build costs $0.01. At 50 deploys/day that's $0.50/day. Basically free.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 11 — BUILDSPEC.YML WALKTHROUGH
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="buildspec.yml" data-section="Section 3 · AWS Services">
+  <div class="badge g">Section 3 · buildspec.yml</div>
+  <h2><code>buildspec.yml</code> — Tell CodeBuild What To Do</h2>
+  <div class="two">
+    <pre><span class="kw">version</span><span class="v">: 0.2</span>
+
+<span class="kw">env</span><span class="v">:</span>
+  <span class="kw">parameter-store</span><span class="v">:</span>
+    <span class="kw">DB_URL</span><span class="v">: /myapp/prod/db-url</span>   <span class="c"># pull from SSM</span>
+
+<span class="kw">phases</span><span class="v">:</span>
+  <span class="kw">install</span><span class="v">:</span>
+    <span class="kw">runtime-versions</span><span class="v">:</span>
+      <span class="kw">nodejs</span><span class="v">: 18</span>
+    <span class="kw">commands</span><span class="v">:</span>
+      <span class="s">- npm install</span>
+
+  <span class="kw">pre_build</span><span class="v">:</span>
+    <span class="kw">commands</span><span class="v">:</span>
+      <span class="s">- npm run lint</span>            <span class="c"># fail here = nothing ships</span>
+      <span class="s">- npm test</span>
+      <span class="s">- npm audit --audit-level=high</span>  <span class="c"># security scan</span>
+
+  <span class="kw">build</span><span class="v">:</span>
+    <span class="kw">commands</span><span class="v">:</span>
+      <span class="s">- echo "Build started `date`"</span>
+      <span class="s">- npm run build</span>
+
+  <span class="kw">post_build</span><span class="v">:</span>
+    <span class="kw">commands</span><span class="v">:</span>
+      <span class="s">- echo "Build complete `date`"</span>
+
+<span class="kw">artifacts</span><span class="v">:</span>
+  <span class="kw">files</span><span class="v">:</span>
+    <span class="s">- app/**/*</span>        <span class="c"># your app files</span>
+    <span class="s">- appspec.yml</span>     <span class="c"># must be in artifact</span>
+    <span class="s">- scripts/**/*</span>    <span class="c"># lifecycle scripts</span>
+  <span class="kw">discard-paths</span><span class="v">: no</span></pre>
+    <div>
+      <ul class="list sm">
+        <li><span class="dot">1</span><span><strong>install:</strong> Runtime + package install. Runs once. Cached between builds for speed.</span></li>
+        <li><span class="dot">2</span><span><strong>pre_build:</strong> Lint, test, security scan. This is your quality gate. Fail here = pipeline stops.</span></li>
+        <li><span class="dot">3</span><span><strong>build:</strong> The actual compile / bundle step. Produces deployable output.</span></li>
+        <li><span class="dot">4</span><span><strong>post_build:</strong> Cleanup, notifications, tagging Docker images, etc.</span></li>
+        <li><span class="dot">5</span><span><strong>artifacts:</strong> What gets zipped and uploaded to S3. CodeDeploy will download this exact package.</span></li>
+      </ul>
+      <div class="info-box box-r" style="margin-top:.75rem">
+        <div class="label">⚠ Common Mistake</div>
+        <p>Forgetting to include <code>appspec.yml</code> and <code>scripts/</code> in the artifacts block. CodeDeploy needs them inside the zip.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 12 — CODEDEPLOY DEEP DIVE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="CodeDeploy" data-section="Section 3 · AWS Services">
+  <div class="badge o">Section 3 · CodeDeploy</div>
+  <h2>CodeDeploy — Automated Deployment to EC2</h2>
+  <div class="two">
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Deployment strategies</strong> — AllAtOnce (fast, has downtime), HalfAtATime (rolling), OneAtATime (safest), Blue/Green</span></li>
+        <li><span class="dot">▸</span><span><strong>Automatic rollback</strong> — configure CodeDeploy to roll back if deployment fails or CloudWatch alarm fires</span></li>
+        <li><span class="dot">▸</span><span><strong>Lifecycle hooks</strong> — run scripts at 8 points in the deployment lifecycle</span></li>
+        <li><span class="dot">▸</span><span><strong>Deployment groups</strong> — target EC2s by tag (e.g., <code>Name=demo-app-server</code>). Add more servers by tagging them.</span></li>
+        <li><span class="dot">▸</span><span><strong>CodeDeploy agent</strong> — a daemon running on EC2 that polls for new deployments and executes them</span></li>
+        <li><span class="dot">▸</span><span><strong>Works with</strong> — EC2, on-prem servers, Lambda, ECS</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="margin-bottom:.75rem;color:var(--ol)">Deployment Lifecycle</h3>
+      <div class="hook-row"><div class="term-dot" style="background:var(--muted)"></div><div class="name">ApplicationStop</div><div class="desc">Stop the running app</div></div>
+      <div class="hook-row"><div class="term-dot" style="background:var(--muted)"></div><div class="name">DownloadBundle</div><div class="desc">Agent downloads artifact from S3</div></div>
+      <div class="hook-row"><div class="term-dot" style="background:var(--rl)"></div><div class="name">BeforeInstall</div><div class="desc">Your script — clean old files</div></div>
+      <div class="hook-row"><div class="term-dot" style="background:var(--muted)"></div><div class="name">Install</div><div class="desc">Agent copies files to destination</div></div>
+      <div class="hook-row"><div class="term-dot" style="background:var(--ol)"></div><div class="name">AfterInstall</div><div class="desc">Your script — set permissions</div></div>
+      <div class="hook-row"><div class="term-dot" style="background:var(--gl)"></div><div class="name">ApplicationStart</div><div class="desc">Your script — start server</div></div>
+      <div class="hook-row"><div class="term-dot" style="background:var(--bl)"></div><div class="name">ValidateService</div><div class="desc">Your script — health check</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 13 — APPSPEC.YML WALKTHROUGH
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="appspec.yml" data-section="Section 3 · AWS Services">
+  <div class="badge o">Section 3 · appspec.yml</div>
+  <h2><code>appspec.yml</code> — Tell CodeDeploy How to Deploy</h2>
+  <div class="two">
+    <pre><span class="kw">version</span><span class="v">: 0.0</span>
+<span class="kw">os</span><span class="v">: linux</span>
+
+<span class="c"># Copy artifact files to EC2</span>
+<span class="kw">files</span><span class="v">:</span>
+  - <span class="kw">source</span><span class="v">: app/</span>
+    <span class="kw">destination</span><span class="v">: /var/www/html/</span>
+
+<span class="kw">permissions</span><span class="v">:</span>
+  - <span class="kw">object</span><span class="v">: /var/www/html/</span>
+    <span class="kw">pattern</span><span class="v">: "**"</span>
+    <span class="kw">owner</span><span class="v">: apache</span>
+    <span class="kw">group</span><span class="v">: apache</span>
+    <span class="kw">mode</span><span class="v">: "755"</span>
+    <span class="kw">type</span><span class="v">:</span>
+      <span class="s">- file</span>
+      <span class="s">- directory</span>
+
+<span class="kw">hooks</span><span class="v">:</span>
+  <span class="kw">BeforeInstall</span><span class="v">:</span>
+    - <span class="kw">location</span><span class="v">: scripts/before_install.sh</span>
+      <span class="kw">timeout</span><span class="v">: 60</span>
+      <span class="kw">runas</span><span class="v">: root</span>
+
+  <span class="kw">AfterInstall</span><span class="v">:</span>
+    - <span class="kw">location</span><span class="v">: scripts/after_install.sh</span>
+      <span class="kw">timeout</span><span class="v">: 60</span>
+      <span class="kw">runas</span><span class="v">: root</span>
+
+  <span class="kw">ApplicationStart</span><span class="v">:</span>
+    - <span class="kw">location</span><span class="v">: scripts/start_server.sh</span>
+      <span class="kw">timeout</span><span class="v">: 60</span>
+      <span class="kw">runas</span><span class="v">: root</span>
+
+  <span class="kw">ValidateService</span><span class="v">:</span>
+    - <span class="kw">location</span><span class="v">: scripts/validate.sh</span>
+      <span class="kw">timeout</span><span class="v">: 30</span></pre>
+    <div>
+      <div class="info-box box-b">
+        <div class="label">📁 scripts/before_install.sh</div>
+        <pre style="margin:0;font-size:.75rem">#!/bin/bash
+systemctl stop httpd || true
+rm -rf /var/www/html/*
+echo "Old files cleared"</pre>
+      </div>
+      <div class="info-box box-g" style="margin-top:.5rem">
+        <div class="label">📁 scripts/start_server.sh</div>
+        <pre style="margin:0;font-size:.75rem">#!/bin/bash
+systemctl start httpd
+systemctl enable httpd
+echo "Apache started"</pre>
+      </div>
+      <div class="info-box box-o" style="margin-top:.5rem">
+        <div class="label">📁 scripts/validate.sh</div>
+        <pre style="margin:0;font-size:.75rem">#!/bin/bash
+curl -f http://localhost/ || exit 1
+echo "Health check passed"</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 14 — CODEPIPELINE DEEP DIVE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="CodePipeline" data-section="Section 3 · AWS Services">
+  <div class="badge p">Section 3 · CodePipeline</div>
+  <h2>CodePipeline — The Orchestrator</h2>
+  <div class="two">
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Fully managed</strong> — no infrastructure to manage. Define stages in the console or as code.</span></li>
+        <li><span class="dot">▸</span><span><strong>Event-driven</strong> — CodeCommit push triggers the pipeline via CloudWatch Events. Instant, no polling.</span></li>
+        <li><span class="dot">▸</span><span><strong>Artifact passing</strong> — each stage's output (zip in S3) is passed as input to the next stage. Immutable.</span></li>
+        <li><span class="dot">▸</span><span><strong>Manual approval actions</strong> — add a human gate between staging and prod. Sends SNS notification.</span></li>
+        <li><span class="dot">▸</span><span><strong>Parallel execution</strong> — run multiple actions in one stage simultaneously (e.g., test + security scan in parallel)</span></li>
+        <li><span class="dot">▸</span><span><strong>Pricing</strong> — $1/active pipeline/month. If you have 5 pipelines (dev/staging/prod + hotfix + release), that's $5/month.</span></li>
+      </ul>
+      <div class="info-box box-p" style="margin-top:.75rem">
+        <div class="label">🔔 Pipeline Notifications (Set This Up)</div>
+        <p>CodePipeline + CodeStar Notifications + SNS = Slack alerts on failure. Every failed build or deploy sends a message to your channel. No surprises.</p>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-b">
+        <div class="label">📋 Pipeline Stage Structure (Console View)</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot" style="color:var(--bl)">■</span><span><strong>Stage 1 — Source</strong><br/>Provider: CodeCommit · Branch: main · Trigger: CloudWatch Events</span></li>
+          <li><span class="dot" style="color:var(--gl)">■</span><span><strong>Stage 2 — Build</strong><br/>Provider: CodeBuild · Project: demo-app-build</span></li>
+          <li><span class="dot" style="color:var(--ol)">■</span><span><strong>Stage 3 — Approve</strong> (optional)<br/>Action: Manual approval · SNS notification</span></li>
+          <li><span class="dot" style="color:var(--pl)">■</span><span><strong>Stage 4 — Deploy</strong><br/>Provider: CodeDeploy · App: demo-app · Group: demo-app-dg</span></li>
+        </ul>
+      </div>
+      <div class="info-box box-g" style="margin-top:.5rem">
+        <div class="label">🔄 Artifact Flow in S3</div>
+        <p>Each stage writes to: <code>s3://my-artifacts/pipeline-name/stage-name/artifact.zip</code>. You can download any artifact from any run for debugging.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 15 — IAM ROLES
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="IAM Roles" data-section="Section 3 · AWS Services">
+  <div class="badge p">Section 3 · IAM Roles</div>
+  <h2>IAM Roles — Who Needs What</h2>
+  <p style="margin-bottom:1rem">Every service needs its own IAM role. Here's the minimum setup — don't use AdministratorAccess for any of these.</p>
+  <table>
+    <thead><tr><th>Role</th><th>Used By</th><th>Key Permissions</th><th>Trust Policy</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>CodePipeline<br/>Service Role</td>
+        <td>CodePipeline</td>
+        <td><code>s3:GetObject</code>, <code>s3:PutObject</code>, <code>codebuild:StartBuild</code>, <code>codedeploy:CreateDeployment</code>, <code>codecommit:GetBranch</code></td>
+        <td><code>codepipeline.amazonaws.com</code></td>
+      </tr>
+      <tr>
+        <td>CodeBuild<br/>Service Role</td>
+        <td>CodeBuild</td>
+        <td><code>s3:GetObject</code>, <code>s3:PutObject</code>, <code>logs:CreateLogStream</code>, <code>logs:PutLogEvents</code>, <code>ssm:GetParameter</code></td>
+        <td><code>codebuild.amazonaws.com</code></td>
+      </tr>
+      <tr>
+        <td>CodeDeploy<br/>Service Role</td>
+        <td>CodeDeploy</td>
+        <td><code>AWSCodeDeployRole</code> managed policy (EC2 describe, autoscaling, S3 get)</td>
+        <td><code>codedeploy.amazonaws.com</code></td>
+      </tr>
+      <tr>
+        <td>EC2<br/>Instance Profile</td>
+        <td>EC2 instance</td>
+        <td><code>AmazonEC2RoleforAWSCodeDeploy</code>, <code>AmazonSSMManagedInstanceCore</code></td>
+        <td><code>ec2.amazonaws.com</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="info-box box-r" style="margin-top:.75rem">
+    <div class="label">⚠ Most Common IAM Error</div>
+    <p>CodeDeploy agent on EC2 can't download the artifact from S3. Fix: add <code>s3:GetObject</code> on your artifact bucket ARN to the EC2 instance profile.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 16 — EC2 SETUP
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="EC2 Setup" data-section="Section 3 · AWS Services">
+  <div class="badge o">Section 3 · EC2 Setup</div>
+  <h2>Setting Up the EC2 Target</h2>
+  <div class="two">
+    <div>
+      <h3 style="color:var(--ol);margin-bottom:.75rem">Required Configuration</h3>
+      <ul class="list">
+        <li><span class="dot">1</span><span><strong>AMI:</strong> Amazon Linux 2023 — AWS CLI and AWS tools pre-installed</span></li>
+        <li><span class="dot">2</span><span><strong>IAM Instance Profile:</strong> attach the EC2 role with CodeDeploy + SSM permissions</span></li>
+        <li><span class="dot">3</span><span><strong>Tag the instance:</strong> <code>Name = demo-app-server</code> — CodeDeploy targets by tag</span></li>
+        <li><span class="dot">4</span><span><strong>Security Group:</strong> inbound HTTP (80) for the app, SSH (22) for setup</span></li>
+        <li><span class="dot">5</span><span><strong>Install CodeDeploy agent</strong> — the daemon that polls for deployments</span></li>
+        <li><span class="dot">6</span><span><strong>Install Apache</strong> — our web server for this demo</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="terminal">
+        <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">ec2 — setup commands</span></div>
+        <div class="term-body">
+          <span class="c"># Install CodeDeploy agent</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo yum update -y</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo yum install -y ruby wget</span><br/>
+          <span class="dollar">$ </span><span class="cmd">cd /home/ec2-user</span><br/>
+          <span class="dollar">$ </span><span class="cmd">wget https://aws-codedeploy-us-east-1</span><br/>
+          &nbsp;&nbsp;<span class="cmd">.s3.amazonaws.com/latest/install</span><br/>
+          <span class="dollar">$ </span><span class="cmd">chmod +x ./install</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo ./install auto</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo systemctl start codedeploy-agent</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo systemctl status codedeploy-agent</span><br/>
+          <span class="out">● codedeploy-agent.service</span><br/>
+          <span class="s">&nbsp;&nbsp;Active: active (running)</span><br/><br/>
+          <span class="c"># Install Apache</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo yum install -y httpd</span><br/>
+          <span class="dollar">$ </span><span class="cmd">sudo systemctl enable httpd</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 17 — DEMO INTRO
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo — Introduction" data-section="Section 4 · Hands-On Demo">
+  <div class="badge p">Section 4 · 30–52 min</div>
+  <h2>Hands-On Demo</h2>
+  <div class="two">
+    <div class="card b-b">
+      <div class="icon">🔍</div>
+      <span class="tag">Pre-built walkthrough · 30–42 min</span>
+      <h3>Explore the Pipeline</h3>
+      <p>We'll walk through the pre-built pipeline in the AWS Console — CodePipeline, CodeDeploy — and open the live app running on EC2.</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">⚡</div>
+      <span class="tag">Live Trigger · 42–50 min</span>
+      <h3>Push a Change. Watch It Deploy.</h3>
+      <p>Change one line in <code>index.html</code>, push to CodeCommit, and watch the pipeline auto-trigger and deploy to EC2 in real time.</p>
+    </div>
+  </div>
+  <div class="pipeline" style="margin:1rem 0 .25rem">
+    <div class="pstage" style="border-color:var(--blue)"><div class="icon">📦</div><div class="nm">CodeCommit</div><div class="sb">push → EventBridge fires</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--purple)"><div class="icon">⚙️</div><div class="nm">CodePipeline</div><div class="sb">pulls SourceArtifact → S3</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)"><div class="icon">🚀</div><div class="nm">CodeDeploy</div><div class="sb">downloads zip · runs appspec.yml</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--gl)"><div class="icon">🖥️</div><div class="nm">EC2</div><div class="sb">Apache serves new app</div></div>
+  </div>
+  <div class="info-box box-o" style="margin-top:.5rem;max-width:800px">
+    <div class="label">📌 Demo Note — Build Stage</div>
+    <p>The full pipeline includes a <strong>CodeBuild stage</strong> (compile · test · package). In this demo we deploy directly Source → Deploy because the app is pure HTML — no compilation needed. The Build stage slides (10, 11) still apply for real-world apps with Node/Java/Python code.</p>
+  </div>
+  <p style="margin-top:.5rem">Total time from <code>git push</code> to live on EC2: <strong style="color:var(--gl)">~1 minute</strong></p>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 18 — DEMO WALKTHROUGH STEPS
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Demo — Walkthrough Steps" data-section="Section 4 · Hands-On Demo">
+  <div class="badge p">Section 4 · Console Walk</div>
+  <h2>Console Walkthrough (30–42 min)</h2>
+  <div class="two">
+    <div>
+      <h3 style="color:var(--bl);margin-bottom:.75rem">1. CodePipeline Console</h3>
+      <ul class="list sm">
+        <li><span class="dot">▸</span><span>Open <strong>demo-app-pipeline</strong> — show the 2 active stages: Source → Deploy</span></li>
+        <li><span class="dot">▸</span><span>Show the last succeeded run — green checkmarks on both stages</span></li>
+        <li><span class="dot">▸</span><span><strong>Source stage:</strong> CodePipeline detected the push via EventBridge, pulled the code from CodeCommit, zipped it, stored as <code>SourceArtifact</code> in S3</span></li>
+        <li><span class="dot">▸</span><span>Click into Source stage → show the CodeCommit commit hash that triggered it</span></li>
+        <li><span class="dot">▸</span><span>Show the artifact in S3 — click through to the bucket, download the zip to inspect it</span></li>
+      </ul>
+      <h3 style="color:var(--gl);margin-bottom:.75rem;margin-top:1rem">2. CodeBuild — Full Pipeline Context</h3>
+      <ul class="list sm">
+        <li><span class="dot">▸</span><span>Open <strong>demo-app-build</strong> project — show environment, runtime, <code>buildspec.yml</code> source</span></li>
+        <li><span class="dot">▸</span><span>In the full pipeline: CodeBuild would run <strong>install → pre_build → build → post_build</strong>, produce a zipped artifact, and upload to S3</span></li>
+        <li><span class="dot">▸</span><span>For this HTML demo: Build stage bypassed — SourceArtifact goes directly to CodeDeploy</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="color:var(--ol);margin-bottom:.75rem">3. CodeDeploy Console</h3>
+      <ul class="list sm">
+        <li><span class="dot">▸</span><span>Open <strong>demo-app</strong> application → <strong>demo-app-deployment-group</strong></span></li>
+        <li><span class="dot">▸</span><span><strong>What CodeDeploy does:</strong> downloads SourceArtifact zip from S3 → runs lifecycle hooks in order</span></li>
+        <li><span class="dot">▸</span><span>Click last deployment → show lifecycle events: <strong>BeforeInstall</strong> (stop Apache, clear files) → <strong>Install</strong> (copy files to <code>/var/www/html/</code>) → <strong>AfterInstall</strong> (set permissions) → <strong>ApplicationStart</strong> (start Apache) → <strong>ValidateService</strong> (health check)</span></li>
+        <li><span class="dot">▸</span><span>Show EC2 target health: <strong>Succeeded</strong></span></li>
+        <li><span class="dot">▸</span><span>Point out the rollback button — one click reverts to previous deployment</span></li>
+      </ul>
+      <h3 style="color:var(--pl);margin-bottom:.75rem;margin-top:1rem">4. The App on EC2</h3>
+      <ul class="list sm">
+        <li><span class="dot">▸</span><span>Open browser → EC2 public IP → show the running app</span></li>
+        <li><span class="dot">▸</span><span>The heading reflects the last git commit — proof the pipeline deployed it</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 19 — LIVE DEMO MOMENT
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Demo — Live Push" data-section="Section 4 · Hands-On Demo">
+  <div class="badge p">Section 4 · Live Trigger</div>
+  <h2>Live Demo — Push → Deploy (42–50 min)</h2>
+  <div class="two">
+    <div>
+      <div class="terminal">
+        <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">bash — local machine</span></div>
+        <div class="term-body">
+          <span class="c"># 1. Make the change</span><br/>
+          <span class="dollar">$ </span><span class="cmd">nano app/index.html</span><br/>
+          <span class="c"># Change the &lt;h1&gt; heading text</span><br/><br/>
+          <span class="c"># 2. Commit and push to CodeCommit</span><br/>
+          <span class="dollar">$ </span><span class="cmd">git add app/index.html</span><br/>
+          <span class="dollar">$ </span><span class="cmd">git commit -m "Live demo: update heading"</span><br/>
+          <span class="dollar">$ </span><span class="cmd">git push origin master</span><br/>
+          <span class="out">Counting objects: 5, done.</span><br/>
+          <span class="out">To https://git-codecommit...</span><br/>
+          <span class="s">&nbsp;&nbsp;a3b1c2d..e4f5g6h  master → master</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:.75rem;color:var(--gl)">What Happens at Each Stage</h3>
+      <ol class="steps">
+        <li><strong>Source stage turns blue (0–15 sec)</strong> — EventBridge rule fires on the CodeCommit push. CodePipeline pulls the latest code, zips it, stores as <code>SourceArtifact</code> in S3. Stage turns green.</li>
+        <li><strong>Deploy stage starts (~15 sec)</strong> — CodePipeline passes <code>SourceArtifact</code> to CodeDeploy. The agent on EC2 downloads the zip from S3.</li>
+        <li><strong>BeforeInstall hook runs</strong> — <code>before_install.sh</code>: stops Apache, clears <code>/var/www/html/</code></li>
+        <li><strong>Install</strong> — CodeDeploy copies <code>app/</code> files to <code>/var/www/html/</code></li>
+        <li><strong>AfterInstall hook runs</strong> — <code>after_install.sh</code>: sets file permissions for Apache</li>
+        <li><strong>ApplicationStart hook runs</strong> — <code>start_server.sh</code>: starts and enables Apache</li>
+        <li><strong>Deploy → green (~1 min total)</strong> — all hooks passed. <strong>Refresh the browser</strong> — updated heading is live.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 20 — WHAT JUST HAPPENED
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo — What Just Happened" data-section="Section 4 · Hands-On Demo">
+  <div class="badge p">Section 4 · Recap</div>
+  <h2>What Just Happened — Stage by Stage</h2>
+  <div class="three">
+    <div class="card b-b">
+      <div class="icon">📦</div>
+      <span class="tag">Source Stage (0–15 sec)</span>
+      <h3>EventBridge → CodePipeline</h3>
+      <p>Your <code>git push</code> to CodeCommit fired an EventBridge rule. CodePipeline pulled the latest commit, zipped it into <code>SourceArtifact</code>, and stored it in S3. Zero manual steps. Zero polling.</p>
+    </div>
+    <div class="card b-g">
+      <div class="icon">🔨</div>
+      <span class="tag">Build Stage (full pipeline)</span>
+      <h3>CodeBuild Runs buildspec.yml</h3>
+      <p>In a real app: a fresh container spins up, runs <code>install → pre_build → build → post_build</code>, packages the artifact as a zip, uploads to S3. Container is destroyed. <em>Bypassed in this HTML demo.</em></p>
+    </div>
+    <div class="card b-o">
+      <div class="icon">🚀</div>
+      <span class="tag">Deploy Stage (~45 sec)</span>
+      <h3>CodeDeploy Runs appspec.yml</h3>
+      <p>Agent on EC2 downloaded the zip from S3. <strong>BeforeInstall:</strong> stopped Apache, cleared files. <strong>Install:</strong> copied <code>app/</code> → <code>/var/www/html/</code>. <strong>AfterInstall:</strong> set permissions. <strong>ApplicationStart:</strong> started Apache.</p>
+    </div>
+  </div>
+  <div class="stats" style="margin-top:1.25rem">
+    <div class="stat"><div class="num">0</div><div class="lbl">manual steps</div></div>
+    <div class="stat"><div class="num">~1 min</div><div class="lbl">push to live (demo)</div></div>
+    <div class="stat"><div class="num">100%</div><div class="lbl">auditable in console</div></div>
+    <div class="stat"><div class="num">1-click</div><div class="lbl">rollback if needed</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 21 — BEST PRACTICES INTRO
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Best Practices" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · 52–60 min</div>
+  <h2>Best Practices</h2>
+  <p class="big">This demo pipeline works. Here's what you need to change before it's production-ready.</p>
+  <div class="three" style="margin-top:1.25rem">
+    <div class="card b-r">
+      <div class="icon">🔐</div>
+      <h3>IAM Least Privilege</h3>
+      <p>Each service role gets exactly what it needs. Nothing more.</p>
+    </div>
+    <div class="card b-o">
+      <div class="icon">🏗️</div>
+      <h3>Multi-Environment Pipelines</h3>
+      <p>Separate pipelines for dev, staging, prod with an approval gate before prod.</p>
+    </div>
+    <div class="card b-b">
+      <div class="icon">🔔</div>
+      <h3>Notifications</h3>
+      <p>SNS + CodeStar Notifications → Slack/email on every pipeline failure.</p>
+    </div>
+    <div class="card b-g">
+      <div class="icon">🔒</div>
+      <h3>Secrets Management</h3>
+      <p>SSM Parameter Store or Secrets Manager. Never hardcode in <code>buildspec.yml</code>.</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">📊</div>
+      <h3>CloudWatch Alarms</h3>
+      <p>Alarm on EC2 CPU/error rates. Wire alarm → CodeDeploy auto-rollback.</p>
+    </div>
+    <div class="card" style="border-color:var(--tl)">
+      <div class="icon">🏷️</div>
+      <h3>Immutable Artifacts</h3>
+      <p>Never overwrite S3 artifacts. Keep every build. Enable versioning on the S3 bucket.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 22 — IAM LEAST PRIVILEGE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="IAM Least Privilege" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · IAM</div>
+  <h2>IAM Least Privilege — Do This From Day 1</h2>
+  <div class="two">
+    <div>
+      <div class="info-box box-r">
+        <div class="label">❌ What Most Teams Do</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">×</span><span>Attach <code>AdministratorAccess</code> to the CodeBuild role "to get it working"</span></li>
+          <li><span class="dot">×</span><span>Use the same role for all services</span></li>
+          <li><span class="dot">×</span><span>Never go back and tighten it down</span></li>
+        </ul>
+      </div>
+      <div class="info-box box-g" style="margin-top:.75rem">
+        <div class="label">✅ What You Should Do</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">✓</span><span>One role per service. Separate trust boundaries.</span></li>
+          <li><span class="dot">✓</span><span>Scope S3 permissions to the specific artifact bucket ARN, not <code>*</code></span></li>
+          <li><span class="dot">✓</span><span>Use IAM Access Analyzer to find unused permissions after 30 days</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-b">
+        <div class="label">📋 Minimal CodeBuild Role Policy</div>
+        <pre style="margin:0;font-size:.72rem">{
+  "Effect": "Allow",
+  "Action": [
+    "logs:CreateLogGroup",
+    "logs:CreateLogStream",
+    "logs:PutLogEvents",
+    "s3:GetObject",
+    "s3:PutObject",
+    "s3:GetBucketAcl",
+    "s3:GetBucketLocation",
+    "ssm:GetParameter"
+  ],
+  "Resource": [
+    "arn:aws:logs:*:*:log-group:/aws/codebuild/*",
+    "arn:aws:s3:::my-artifacts-bucket/*",
+    "arn:aws:ssm:*:*:parameter/myapp/*"
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 23 — MULTI-ENV PIPELINES
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Multi-Environment Pipelines" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · Multi-Env</div>
+  <h2>Multi-Environment Pipelines</h2>
+  <div class="two">
+    <div>
+      <div class="pipeline" style="flex-direction:column;align-items:flex-start;gap:.5rem;margin:0">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--blue);min-width:120px"><div class="nm">CodeCommit</div><div class="sb">main branch push</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--green);min-width:120px"><div class="nm">CodeBuild</div><div class="sb">build + test</div></div>
+        </div>
+        <div style="padding-left:1.5rem;color:var(--muted);font-size:.8rem">↓ artifact to S3</div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--orange);min-width:120px"><div class="nm">Deploy Dev</div><div class="sb">CodeDeploy → EC2 dev</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--orange);min-width:120px"><div class="nm">Deploy Staging</div><div class="sb">CodeDeploy → EC2 stg</div></div>
+        </div>
+        <div style="padding-left:1.5rem;color:var(--muted);font-size:.8rem">↓ manual approval gate</div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--purple);min-width:120px"><div class="nm">Approve</div><div class="sb">Human clicks Approve</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--gl);min-width:120px"><div class="nm">Deploy Prod</div><div class="sb">CodeDeploy → EC2 prod</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Build once, deploy everywhere</strong> — the same artifact from CodeBuild deploys to dev, staging, and prod. No rebuilding.</span></li>
+        <li><span class="dot">▸</span><span><strong>Manual approval gate</strong> — add an "Approval" action in CodePipeline between staging and prod. It sends an SNS notification. A human reviews staging and clicks Approve.</span></li>
+        <li><span class="dot">▸</span><span><strong>Separate deployment groups</strong> — CodeDeploy has a dev group (tag: <code>env=dev</code>) and a prod group (tag: <code>env=prod</code>). Same app, different targets.</span></li>
+        <li><span class="dot">▸</span><span><strong>Blue/Green for prod</strong> — for zero-downtime prod deployments, use CodeDeploy's Blue/Green strategy. Spins up new instances, shifts traffic after validation, terminates old ones.</span></li>
+      </ul>
+      <div class="info-box box-o" style="margin-top:.75rem">
+        <div class="label">💡 Bank of America Pattern</div>
+        <p>In enterprise environments, every change to prod requires an approval action in the pipeline + a change record number. CodePipeline's manual approval supports custom comments — put the change ticket number there.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 24 — SECRETS MANAGEMENT
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Secrets Management" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · Secrets</div>
+  <h2>Secrets Management — Never Hardcode</h2>
+  <div class="two">
+    <div>
+      <div class="info-box box-r">
+        <div class="label">❌ What Not To Do</div>
+        <pre style="margin:0;font-size:.78rem"><span class="c"># buildspec.yml — DO NOT DO THIS</span>
+<span class="kw">env</span><span class="v">:</span>
+  <span class="kw">variables</span><span class="v">:</span>
+    <span class="kw">DB_PASSWORD</span><span class="v">: "mySuperSecretPass123"</span>
+    <span class="kw">API_KEY</span><span class="v">: "sk-abc123xyz"</span>
+</pre>
+        <p style="margin-top:.5rem;font-size:.82rem">This gets committed to CodeCommit. Anyone with repo access has your prod credentials.</p>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-g">
+        <div class="label">✅ Use SSM Parameter Store</div>
+        <pre style="margin:0;font-size:.78rem"><span class="c"># Store the secret</span>
+<span class="dollar">$ </span><span class="cmd">aws ssm put-parameter \</span>
+  <span class="cmd">--name /myapp/prod/db-password \</span>
+  <span class="cmd">--value "mySuperSecretPass123" \</span>
+  <span class="cmd">--type SecureString</span>
+
+<span class="c"># buildspec.yml — pull at build time</span>
+<span class="kw">env</span><span class="v">:</span>
+  <span class="kw">parameter-store</span><span class="v">:</span>
+    <span class="kw">DB_PASSWORD</span><span class="v">: /myapp/prod/db-password</span>
+    <span class="kw">API_KEY</span><span class="v">: /myapp/prod/api-key</span>
+
+<span class="c"># Now use $DB_PASSWORD in build commands</span></pre>
+      </div>
+      <div class="info-box box-b" style="margin-top:.5rem">
+        <div class="label">🔐 SSM vs Secrets Manager</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">▸</span><span><strong>SSM Parameter Store</strong> — free tier available. Good for config + non-rotating secrets.</span></li>
+          <li><span class="dot">▸</span><span><strong>Secrets Manager</strong> — $0.40/secret/month. Use for DB credentials that need auto-rotation.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 25 — MONITORING & NOTIFICATIONS
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Monitoring & Notifications" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · Monitoring</div>
+  <h2>Monitoring & Notifications</h2>
+  <div class="two">
+    <div>
+      <h3 style="color:var(--bl);margin-bottom:.75rem">Pipeline Notifications</h3>
+      <ol class="steps">
+        <li><strong>Create an SNS Topic</strong> — <code>aws sns create-topic --name cicd-alerts</code></li>
+        <li><strong>Subscribe Slack/Email</strong> — SNS → Lambda → Slack webhook, or SNS → email endpoint directly</li>
+        <li><strong>Create CodeStar Notification rule</strong> — in CodePipeline console → Notify → Create notification rule → select events: Pipeline execution failed, Stage execution failed</li>
+        <li><strong>Wire to SNS topic</strong> — select your <code>cicd-alerts</code> topic</li>
+      </ol>
+      <div class="info-box box-g" style="margin-top:.75rem">
+        <div class="label">✅ Result</div>
+        <p>Every failed pipeline run sends an immediate alert to your Slack channel with the pipeline name, stage that failed, and a direct link to the execution.</p>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--ol);margin-bottom:.75rem">CloudWatch Alarms → Auto Rollback</h3>
+      <ul class="list">
+        <li><span class="dot">▸</span><span>Create a CloudWatch alarm on EC2 error rate or 5xx responses from ALB</span></li>
+        <li><span class="dot">▸</span><span>In CodeDeploy deployment group settings: Rollbacks → "Roll back when a deployment fails" AND "Roll back when alarm thresholds are met"</span></li>
+        <li><span class="dot">▸</span><span>Wire the CloudWatch alarm to CodeDeploy</span></li>
+        <li><span class="dot">▸</span><span>If your deployment causes an error rate spike, CodeDeploy automatically redeploys the previous version</span></li>
+      </ul>
+      <div class="info-box box-r" style="margin-top:.75rem">
+        <div class="label">⚡ This Is Why CD Beats Manual Deploys</div>
+        <p>A manual deploy has no automatic rollback. With this setup, a bad deploy that causes errors rolls itself back within minutes — no human needed.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 26 — CODECOMMIT VS GITHUB
+══════════════════════════════════════════ -->
+<div class="slide" data-label="CodeCommit vs GitHub" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · Source Control Choice</div>
+  <h2>CodeCommit vs GitHub</h2>
+  <table>
+    <thead><tr><th></th><th>CodeCommit</th><th>GitHub</th></tr></thead>
+    <tbody>
+      <tr><td>Auth</td><td>IAM — no OAuth, no personal tokens</td><td>Personal access tokens, OAuth apps, GitHub Apps</td></tr>
+      <tr><td>Audit</td><td>Every API call in CloudTrail automatically</td><td>Requires GitHub Audit Log (Enterprise)</td></tr>
+      <tr><td>Network</td><td>Traffic stays in AWS. VPC Endpoints supported.</td><td>Leaves AWS network. Extra data transfer costs.</td></tr>
+      <tr><td>Compliance</td><td>SOC 1/2/3, ISO, HIPAA, FedRAMP. No data leaves AWS.</td><td>SOC 2, ISO — but data is on GitHub's infra</td></tr>
+      <tr><td>PR Experience</td><td>Basic — functional but limited</td><td>Excellent — rich UI, code review tooling, Copilot</td></tr>
+      <tr><td>CI/CD Integration</td><td>Native — zero config with CodePipeline</td><td>Requires CodeStar Connection + extra IAM setup</td></tr>
+      <tr><td>Cost</td><td>Free (first 5 active users/month free)</td><td>Free for public; $4–$21/user/month for private</td></tr>
+    </tbody>
+  </table>
+  <div class="info-box box-g" style="margin-top:.75rem">
+    <div class="label">💡 My Take</div>
+    <p>At BofA: CodeCommit. IAM auth + VPC Endpoints + CloudTrail is non-negotiable for banking infra. For my side projects: GitHub. The PR experience and ecosystem matter more than audit purity.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 27 — TROUBLESHOOTING
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Troubleshooting" data-section="Section 5 · Best Practices">
+  <div class="badge g">Section 5 · Troubleshooting</div>
+  <h2>Most Common Failures (and How to Fix Them)</h2>
+  <table>
+    <thead><tr><th>Error</th><th>Root Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>CodeBuild: Access denied to S3</td>
+        <td>CodeBuild role missing <code>s3:PutObject</code> on artifact bucket</td>
+        <td>Add S3 permission scoped to artifact bucket ARN to CodeBuild role</td>
+      </tr>
+      <tr>
+        <td>CodeDeploy: No instances found</td>
+        <td>EC2 tag doesn't match deployment group tag filter</td>
+        <td>Verify EC2 tag <code>Name=demo-app-server</code> matches exactly. Case-sensitive.</td>
+      </tr>
+      <tr>
+        <td>CodeDeploy: agent not running</td>
+        <td>codedeploy-agent service stopped or not installed</td>
+        <td><code>sudo systemctl start codedeploy-agent</code> on EC2. Check <code>/var/log/aws/codedeploy-agent/codedeploy-agent.log</code></td>
+      </tr>
+      <tr>
+        <td>Lifecycle hook timeout</td>
+        <td>Script takes longer than <code>timeout</code> value in appspec.yml</td>
+        <td>Increase timeout. Check if <code>httpd</code> is slow to start. Add logging to hook scripts.</td>
+      </tr>
+      <tr>
+        <td>appspec.yml not found</td>
+        <td>appspec.yml not included in CodeBuild artifacts block</td>
+        <td>Add <code>- appspec.yml</code> and <code>- scripts/**/*</code> to artifacts.files in buildspec.yml</td>
+      </tr>
+      <tr>
+        <td>Pipeline doesn't trigger on push</td>
+        <td>EventBridge rule is disabled or branch name mismatch</td>
+        <td>Check EventBridge → Rules for the CodePipeline-created rule. Verify branch name is <code>master</code> (not <code>main</code>).</td>
+      </tr>
+      <tr>
+        <td>CodeBuild: AccountLimitExceededException — "Cannot have more than 0 builds in queue"</td>
+        <td>Account-level CodeBuild concurrent build quota is 0. Common on new/restricted AWS accounts.</td>
+        <td>Option 1: Open AWS Support → Service limit increase → CodeBuild → Concurrent builds → request 1+. Option 2: Remove Build stage from pipeline (Source → Deploy directly) — valid for static apps that don't need compilation.</td>
+      </tr>
+      <tr>
+        <td>Deploy stage fails: "The deployment failed because no instances were found"</td>
+        <td>EC2 instance tag doesn't match deployment group tag filter exactly</td>
+        <td>Go to EC2 → Tags. Verify <code>Name = demo-app-server</code> (case-sensitive). Check CodeDeploy deployment group tag filter matches exactly.</td>
+      </tr>
+      <tr>
+        <td>appspec.yml: "The overall deployment failed because too many individual instances failed"</td>
+        <td>One or more lifecycle hook scripts exited with non-zero code</td>
+        <td>Go to CodeDeploy → Deployments → click failed deployment → View events → click the failed lifecycle event → View logs. Fix the script and redeploy.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 28 — PRODUCTION READY CHECKLIST
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Production Ready — Checklist" data-section="Section 5 · Best Practices">
+  <div class="badge r">Section 5 · Production Ready</div>
+  <h2>Making This Pipeline Production Ready</h2>
+  <div class="two">
+    <div>
+      <h3 style="color:var(--bl);margin-bottom:.75rem">Security & Access</h3>
+      <ul class="list sm">
+        <li><span class="dot">✓</span><span><strong>IAM least privilege</strong> — one scoped role per service. No <code>AdministratorAccess</code>.</span></li>
+        <li><span class="dot">✓</span><span><strong>S3 bucket encryption</strong> — enable KMS encryption + block all public access on artifact bucket</span></li>
+        <li><span class="dot">✓</span><span><strong>S3 versioning</strong> — enable versioning on artifact bucket. Every build artifact is kept and recoverable.</span></li>
+        <li><span class="dot">✓</span><span><strong>Secrets in SSM / Secrets Manager</strong> — never hardcode credentials in <code>buildspec.yml</code> or environment variables</span></li>
+        <li><span class="dot">✓</span><span><strong>CodeBuild in VPC</strong> — run builds inside your VPC to access private databases and internal services</span></li>
+        <li><span class="dot">✓</span><span><strong>Branch protection</strong> — CodeCommit approval rule: require 1 reviewer before merging to <code>main</code></span></li>
+        <li><span class="dot">✓</span><span><strong>CloudTrail enabled</strong> — every pipeline action, build, and deployment is logged for audit</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="color:var(--gl);margin-bottom:.75rem">Reliability & Deployment</h3>
+      <ul class="list sm">
+        <li><span class="dot">✓</span><span><strong>Multi-environment pipeline</strong> — dev → staging → manual approval → prod. Never deploy untested code directly to prod.</span></li>
+        <li><span class="dot">✓</span><span><strong>Blue/Green deployment</strong> — CodeDeploy Blue/Green for prod: zero downtime, instant rollback by shifting traffic back</span></li>
+        <li><span class="dot">✓</span><span><strong>Auto-rollback on alarm</strong> — wire CloudWatch alarm (error rate / 5xx) to CodeDeploy auto-rollback</span></li>
+        <li><span class="dot">✓</span><span><strong>ValidateService hook</strong> — always add a health check script in <code>appspec.yml</code> — deployment fails if the app doesn't respond</span></li>
+        <li><span class="dot">✓</span><span><strong>Pipeline execution mode: SUPERSEDED</strong> — new push cancels in-progress run. Prevents stale deploys.</span></li>
+        <li><span class="dot">✓</span><span><strong>Notifications</strong> — CodeStar Notifications → SNS → Slack/email on every failure</span></li>
+        <li><span class="dot">✓</span><span><strong>Pipeline as code (Terraform)</strong> — define all services as Terraform. Version-control your pipeline definition.</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 28b — PRODUCTION READY DETAIL
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Production Ready — Architecture" data-section="Section 5 · Best Practices">
+  <div class="badge r">Section 5 · Prod Architecture</div>
+  <h2>Production-Grade Pipeline Architecture</h2>
+  <div class="two">
+    <div>
+      <div class="pipeline" style="flex-direction:column;align-items:flex-start;gap:.4rem;margin:0">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--blue);min-width:130px"><div class="nm">CodeCommit</div><div class="sb">PR → approval → merge</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--green);min-width:130px"><div class="nm">CodeBuild</div><div class="sb">build · test · scan</div></div>
+        </div>
+        <div style="padding-left:1.5rem;color:var(--muted);font-size:.78rem">↓ artifact → S3 (versioned + encrypted)</div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--orange);min-width:130px"><div class="nm">Deploy Dev</div><div class="sb">AllAtOnce · auto-rollback</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--orange);min-width:130px"><div class="nm">Deploy Staging</div><div class="sb">AllAtOnce · smoke tests</div></div>
+        </div>
+        <div style="padding-left:1.5rem;color:var(--muted);font-size:.78rem">↓ manual approval gate (SNS notification)</div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--purple);min-width:130px"><div class="nm">Approve</div><div class="sb">Human reviews staging</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--gl);min-width:130px"><div class="nm">Deploy Prod</div><div class="sb">Blue/Green · alarm rollback</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-r" style="margin-bottom:.5rem">
+        <div class="label">🔴 This Demo vs Production</div>
+        <table style="margin-top:.4rem;font-size:.78rem">
+          <thead><tr><th>Area</th><th>Demo</th><th>Production</th></tr></thead>
+          <tbody>
+            <tr><td>Stages</td><td>Source → Deploy</td><td>Source → Build → Approve → Deploy</td></tr>
+            <tr><td>Deployment</td><td>AllAtOnce</td><td>Blue/Green</td></tr>
+            <tr><td>Rollback</td><td>Manual</td><td>Auto (CloudWatch alarm)</td></tr>
+            <tr><td>Secrets</td><td>None needed</td><td>SSM Parameter Store</td></tr>
+            <tr><td>Artifact bucket</td><td>Unencrypted</td><td>KMS + versioned</td></tr>
+            <tr><td>Branch</td><td>No protection</td><td>Approval rule required</td></tr>
+            <tr><td>Pipeline def</td><td>Console</td><td>Terraform</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box box-g">
+        <div class="label">✅ Minimum Viable Prod Checklist</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">✓</span><span>Manual approval gate before prod</span></li>
+          <li><span class="dot">✓</span><span>Blue/Green deployment strategy</span></li>
+          <li><span class="dot">✓</span><span>CloudWatch alarm → auto-rollback</span></li>
+          <li><span class="dot">✓</span><span>SNS failure notification</span></li>
+          <li><span class="dot">✓</span><span>KMS-encrypted artifact bucket</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 29 — WHAT'S NEXT
+══════════════════════════════════════════ -->
+<div class="slide" data-label="What's Next" data-section="">
+  <div class="badge b">Level Up</div>
+  <h2>What's Next After This</h2>
+  <div class="three">
+    <div class="card b-b">
+      <div class="icon">🐳</div>
+      <span class="tag">Next Level</span>
+      <h3>Containers on ECS</h3>
+      <p>Replace EC2 with ECS Fargate. CodeBuild builds the Docker image, pushes to ECR, CodeDeploy does Blue/Green on ECS.</p>
+    </div>
+    <div class="card b-g">
+      <div class="icon">⚡</div>
+      <span class="tag">Serverless</span>
+      <h3>Lambda Pipelines</h3>
+      <p>Use CodeBuild to run <code>sam build</code> and <code>sam deploy</code>. Zero EC2 management. Pay per invocation.</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">🏗️</div>
+      <span class="tag">Infrastructure as Code</span>
+      <h3>Terraform the Pipeline</h3>
+      <p>Define the entire pipeline (CodeCommit, CodeBuild, CodeDeploy, CodePipeline, IAM roles) as Terraform. Version-controlled infra.</p>
+    </div>
+    <div class="card b-o">
+      <div class="icon">🔐</div>
+      <span class="tag">Security</span>
+      <h3>Add SAST + DAST</h3>
+      <p>Add a CodeBuild action in pre_build that runs <code>npm audit</code>, Trivy for container scanning, or OWASP ZAP for DAST against staging.</p>
+    </div>
+    <div class="card" style="border-color:var(--tl)">
+      <div class="icon">📊</div>
+      <span class="tag">Observability</span>
+      <h3>CloudWatch Dashboard</h3>
+      <p>Build a dashboard tracking deploy frequency, build duration, failure rate. DORA metrics from your pipeline data.</p>
+    </div>
+    <div class="card b-r">
+      <div class="icon">🌍</div>
+      <span class="tag">Multi-Region</span>
+      <h3>Cross-Region Pipelines</h3>
+      <p>Deploy the same artifact to us-east-1 and eu-west-1 in parallel. CodePipeline supports cross-region actions natively.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 29 — KEY TAKEAWAY
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Key Takeaway" data-section="">
+  <div class="badge g">Takeaway</div>
+  <h1>The Pipeline Is the Product</h1>
+  <div class="divider"></div>
+  <p class="big">CodeCommit stores your code. CodeBuild validates it. CodeDeploy lands it safely on EC2. CodePipeline connects them — and enforces the process automatically, every time.</p>
+  <div class="pipeline" style="margin:2rem 0">
+    <div class="pstage" style="border-color:var(--blue)"><div class="icon">📦</div><div class="nm">CodeCommit</div><div class="sb">Source</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)"><div class="icon">🔨</div><div class="nm">CodeBuild</div><div class="sb">Build · test · scan</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)"><div class="icon">🚀</div><div class="nm">CodeDeploy</div><div class="sb">Lifecycle hooks</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--gl)"><div class="icon">🖥️</div><div class="nm">EC2</div><div class="sb">Live app</div></div>
+  </div>
+  <div class="quote">
+    <p>You don't need a big team or expensive tooling to ship like a pro. You need a pipeline that catches mistakes before they reach your users.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 30 — Q&A
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Q&A" data-section="">
+  <div class="badge g">Q&amp;A · 57–60 min</div>
+  <h1>Questions?</h1>
+  <div class="divider"></div>
+  <p class="big">The setup guide (Word document) has been shared — it covers every step in this demo from scratch, including IAM roles, EC2 setup, and all config files.</p>
+  <div class="two" style="margin-top:1.5rem;max-width:700px">
+    <div class="card b-b" style="text-align:center">
+      <div class="icon">📄</div>
+      <h3>Setup Guide</h3>
+      <p>cicd-aws-setup-guide.docx<br/>7 steps, all commands included</p>
+    </div>
+    <div class="card b-g" style="text-align:center">
+      <div class="icon">💻</div>
+      <h3>Demo Files</h3>
+      <p>buildspec.yml · appspec.yml<br/>hook scripts · index.html</p>
+    </div>
+  </div>
+  <div class="author-bar" style="margin-top:2rem">
+    <span><strong>Charan Dasari</strong></span>
+    <span class="sep">|</span>
+    <span>Terraform · AWS · FastAPI · Next.js · Claude API</span>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ══ Nav ══ -->
+<nav class="nav">
+  <button onclick="prev()" title="Prev">◀</button>
+  <span class="ctr" id="ctr">1 / 32</span>
+  <button onclick="next()" title="Next">▶</button>
+</nav>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+let cur = 0;
+
+function show(n) {
+  slides[cur].classList.remove('active');
+  cur = ((n % slides.length) + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+  document.getElementById('slide-label').textContent = slides[cur].dataset.label || '';
+  document.getElementById('section-tag').textContent = slides[cur].dataset.section || '';
+  document.getElementById('progress').style.width = ((cur + 1) / slides.length * 100) + '%';
+}
+
+function next() { show(cur + 1); }
+function prev() { show(cur - 1); }
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key))        { e.preventDefault(); prev(); }
+});
+
+show(0);
+</script>
+</body>
+</html>
