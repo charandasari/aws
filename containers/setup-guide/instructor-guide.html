@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instructor Guide — Containers on AWS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --surface: #f6f7fb;
+  --surface2: #eceef7;
+  --surface3: #e2e5f0;
+  --border: #dde1ee;
+  --border-bright: #c2c8df;
+  --text: #12152a;
+  --text-muted: #44495f;
+  --text-dim: #8e94ae;
+  --accent: #4f46e5;
+  --accent2: #0d9a74;
+  --accent3: #c97a0a;
+  --accent4: #dc2626;
+  --beginner: #0d9a74;
+  --intermediate: #4f46e5;
+  --advanced: #c97a0a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Lora', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* PROGRESS BAR */
+.progress-bar-container {
+  position: sticky; top: 0; z-index: 100;
+  height: 3px; background: var(--border);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--beginner), var(--accent), var(--advanced));
+  width: 0%; transition: width 0.1s;
+}
+
+/* HERO */
+.hero {
+  position: relative; padding: 80px 40px 60px;
+  text-align: center;
+  background: linear-gradient(180deg, #eef0fb 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--border); overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -80px; left: 50%;
+  transform: translateX(-50%); width: 600px; height: 300px;
+  background: radial-gradient(ellipse, rgba(79,70,229,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(79,70,229,0.08); border: 1px solid rgba(79,70,229,0.2);
+  border-radius: 100px; padding: 6px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 28px;
+}
+.hero-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.hero h1 {
+  font-family: 'Syne', sans-serif; font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800; line-height: 1.05; letter-spacing: -2px; margin-bottom: 20px;
+  background: linear-gradient(135deg, #12152a 0%, #3730a3 50%, #4f46e5 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero-sub {
+  font-size: 18px; color: var(--text-muted); max-width: 560px;
+  margin: 0 auto 40px; line-height: 1.7; font-style: italic;
+}
+
+/* LEVEL PILLS (optional — only add if content has tiers) */
+.level-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.level-pill {
+  padding: 8px 20px; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; border: 1.5px solid;
+}
+.level-pill.beginner    { color: var(--beginner);    border-color: var(--beginner);    background: rgba(13,154,116,0.06); }
+.level-pill.intermediate{ color: var(--intermediate); border-color: var(--intermediate); background: rgba(79,70,229,0.06); }
+.level-pill.advanced    { color: var(--advanced);    border-color: var(--advanced);    background: rgba(201,122,10,0.06); }
+.level-pill.all-btn     { color: var(--text-muted);  border-color: var(--border-bright); background: var(--surface); }
+.level-pill:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.level-pill.active.beginner     { background: rgba(13,154,116,0.14); }
+.level-pill.active.intermediate { background: rgba(79,70,229,0.14); }
+.level-pill.active.advanced     { background: rgba(201,122,10,0.14); }
+.level-pill.active.all-btn      { background: var(--surface2); color: var(--text); }
+
+/* LAYOUT */
+.layout { display: grid; grid-template-columns: 260px 1fr; max-width: 1200px; margin: 0 auto; }
+
+/* SIDEBAR */
+.sidebar {
+  position: sticky; top: 3px; height: calc(100vh - 3px); overflow-y: auto;
+  padding: 32px 0; border-right: 1px solid var(--border);
+  background: var(--surface); scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar-section-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim); padding: 0 20px; margin: 24px 0 8px;
+}
+.sidebar-link {
+  display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+  font-family: 'Syne', sans-serif; font-size: 13px;
+  color: var(--text-muted); text-decoration: none;
+  cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent;
+}
+.sidebar-link:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+.sidebar-link.active { color: var(--text); background: rgba(79,70,229,0.06); border-left-color: var(--accent); }
+.sidebar-link .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-link.level-b .dot { background: var(--beginner); }
+.sidebar-link.level-i .dot { background: var(--intermediate); }
+.sidebar-link.level-a .dot { background: var(--advanced); }
+
+/* CONTENT */
+.content { padding: 40px 48px 120px; max-width: 820px; }
+
+/* SECTION */
+.section { margin-bottom: 72px; animation: fadeIn 0.4s ease both; }
+.section.hidden { display: none; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.section-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
+.step-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--text-dim); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; flex-shrink: 0; margin-top: 6px;
+}
+.section-title-wrap h2 {
+  font-family: 'Syne', sans-serif; font-size: 28px;
+  font-weight: 800; letter-spacing: -0.5px; color: var(--text); line-height: 1.2;
+}
+.level-tag {
+  display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 4px; margin-top: 6px; font-weight: 700;
+}
+.level-tag.b { color: var(--beginner);    background: rgba(13,154,116,0.08); border: 1px solid rgba(13,154,116,0.2); }
+.level-tag.i { color: var(--intermediate); background: rgba(79,70,229,0.08);  border: 1px solid rgba(79,70,229,0.2); }
+.level-tag.a { color: var(--advanced);    background: rgba(201,122,10,0.08); border: 1px solid rgba(201,122,10,0.2); }
+
+/* STEPS */
+.steps { display: flex; flex-direction: column; gap: 16px; }
+.step {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.step:hover { border-color: var(--border-bright); box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.step-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; cursor: pointer; user-select: none; background: #fff;
+}
+.step-num {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.step-num.b { background: rgba(13,154,116,0.10);  color: var(--beginner); }
+.step-num.i { background: rgba(79,70,229,0.10);   color: var(--intermediate); }
+.step-num.a { background: rgba(201,122,10,0.10);  color: var(--advanced); }
+.step-num.n { background: var(--surface2); color: var(--text-dim); }
+.step-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+.step-toggle {
+  width: 20px; height: 20px; color: var(--text-dim); transition: transform 0.2s;
+  font-size: 18px; line-height: 20px; text-align: center; flex-shrink: 0;
+}
+.step.open .step-toggle { transform: rotate(180deg); }
+.step-body {
+  display: none; padding: 0 20px 20px; border-top: 1px solid var(--border);
+  animation: slideDown 0.2s ease; background: #fff;
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.step.open .step-body { display: block; }
+.step-body p { color: var(--text-muted); font-size: 15px; line-height: 1.8; margin: 16px 0 12px; }
+.step-body ul, .step-body ol { color: var(--text-muted); font-size: 14px; line-height: 1.9; padding-left: 20px; margin: 8px 0; }
+.step-body li { margin-bottom: 4px; }
+.step-body strong { color: var(--text); }
+.step-body code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  background: var(--surface2); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--border); color: var(--accent);
+}
+
+/* CODE BLOCK — ALWAYS LIGHT BACKGROUND, NEVER DARK */
+/* background: #f6f7fb is required — do not change to dark colors */
+.code-block {
+  position: relative; background: #f6f7fb; border: 1px solid var(--border);
+  border-radius: 10px; margin: 14px 0; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: #eceef7;
+}
+.code-lang { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+.copy-btn {
+  background: none; border: 1px solid var(--border-bright); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--accent); }
+.copy-btn.copied { color: var(--accent2); border-color: var(--accent2); }
+.code-block pre {
+  padding: 16px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--text-muted);
+}
+.code-block pre .cmd  { color: #2563eb; }
+.code-block pre .str  { color: #16a34a; }
+.code-block pre .cmt  { color: #9ca3af; font-style: italic; }
+.code-block pre .key  { color: #7c3aed; }
+.code-block pre .num  { color: #d97706; }
+.code-block pre .flag { color: #b45309; }
+
+/* TERMINAL — ALWAYS WHITE BACKGROUND, NEVER DARK */
+/* background: #ffffff is required — do not change to dark colors */
+.terminal {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin: 16px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #f0f1f6; border-bottom: 1px solid var(--border);
+}
+.terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+.terminal-dot:nth-child(1) { background: #ff5f57; }
+.terminal-dot:nth-child(2) { background: #febc2e; }
+.terminal-dot:nth-child(3) { background: #28c840; }
+.terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+.terminal-body { padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
+.terminal-body .prompt  { color: #0d7a50; }
+.terminal-body .out     { color: #44495f; }
+.terminal-body .success { color: #0d7a50; }
+.terminal-body .info    { color: #2563eb; }
+.terminal-body .warn    { color: #c97a0a; }
+
+/* TIP BOXES */
+.tip, .warning, .info-box {
+  border-radius: 10px; padding: 14px 18px; margin: 14px 0;
+  font-size: 14px; line-height: 1.7; display: flex; gap: 12px;
+}
+.tip      { background: rgba(13,154,116,0.06);  border: 1px solid rgba(13,154,116,0.18); color: #0a7a5c; }
+.warning  { background: rgba(201,122,10,0.06);  border: 1px solid rgba(201,122,10,0.18); color: #9a5e08; }
+.info-box { background: rgba(79,70,229,0.06);   border: 1px solid rgba(79,70,229,0.18);  color: #3730a3; }
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* CHECKLIST */
+.checklist { list-style: none; padding: 0; margin: 12px 0; }
+.checklist li {
+  display: flex; align-items: flex-start; gap: 10px; padding: 6px 0;
+  font-size: 14px; color: var(--text-muted); border-bottom: 1px solid var(--border);
+}
+.checklist li:last-child { border-bottom: none; }
+.check-box {
+  width: 18px; height: 18px; border: 1.5px solid var(--border-bright);
+  border-radius: 5px; flex-shrink: 0; margin-top: 1px; cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.check-box:hover { border-color: var(--accent); }
+.check-box.checked { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* DIAGRAM */
+.diagram {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin: 16px 0; text-align: center;
+}
+.diagram-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.diagram-node {
+  background: #fff; border: 1px solid var(--border-bright); border-radius: 10px;
+  padding: 12px 20px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.diagram-node.accent { border-color: var(--accent);      color: var(--accent);      background: rgba(79,70,229,0.05); }
+.diagram-node.green  { border-color: var(--beginner);    color: var(--beginner);    background: rgba(13,154,116,0.05); }
+.diagram-node.orange { border-color: var(--advanced);    color: var(--advanced);    background: rgba(201,122,10,0.05); }
+.diagram-arrow { color: var(--text-dim); font-size: 20px; }
+
+/* FILE TREE (dark) */
+.file-tree {
+  background: #0f1117; border: 1px solid #1e2230; border-radius: 10px;
+  padding: 16px; margin: 14px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 2;
+}
+.file-tree .folder    { color: #61afef; }
+.file-tree .file      { color: #abb2bf; }
+.file-tree .important { color: #e5c07b; font-weight: 700; }
+.file-tree .indent1   { padding-left: 20px; }
+.file-tree .indent2   { padding-left: 40px; }
+.file-tree .indent3   { padding-left: 60px; }
+
+/* SKILL SHOWCASE (dark, for config/YAML blocks) */
+.skill-showcase { background: #0f1117; border: 1px solid #1e2230; border-radius: 12px; overflow: hidden; margin: 14px 0; }
+.skill-showcase-header {
+  padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid #1e2230;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #555;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.skill-showcase-body { padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8; color: #abb2bf; }
+.skill-showcase-body .sk-key     { color: #c678dd; }
+.skill-showcase-body .sk-val     { color: #98c379; }
+.skill-showcase-body .sk-comment { color: #5c6370; }
+.skill-showcase-body .sk-head    { color: #e5c07b; font-weight: bold; }
+.skill-showcase-body .sk-code    { color: #61afef; }
+
+/* PHASE DIVIDER */
+.phase-divider { display: flex; align-items: center; gap: 16px; margin: 48px 0 32px; }
+.phase-divider-line { flex: 1; height: 1px; background: var(--border); }
+.phase-label {
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; padding: 6px 16px;
+  border-radius: 100px; border: 1px solid; white-space: nowrap;
+}
+.phase-label.b { color: var(--beginner);    border-color: rgba(13,154,116,0.25); background: rgba(13,154,116,0.05); }
+.phase-label.i { color: var(--intermediate); border-color: rgba(79,70,229,0.25);  background: rgba(79,70,229,0.05); }
+.phase-label.a { color: var(--advanced);    border-color: rgba(201,122,10,0.25); background: rgba(201,122,10,0.05); }
+.phase-label.n { color: var(--text-dim);    border-color: var(--border);         background: var(--surface); }
+
+/* COMMAND CARD */
+.command-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; margin: 10px 0;
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s;
+}
+.command-card:hover { border-color: var(--border-bright); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.command-icon {
+  width: 36px; height: 36px; border-radius: 8px; background: rgba(79,70,229,0.08);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.command-name { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); margin-bottom: 2px; }
+.command-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.copy-cmd-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 5px 10px;
+  border-radius: 5px; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.copy-cmd-btn:hover { color: var(--text); border-color: var(--border-bright); background: var(--surface2); }
+
+/* TABLE */
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.data-table th {
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+  padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--border);
+  background: var(--surface);
+}
+.data-table td {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  color: var(--text-muted); line-height: 1.6; vertical-align: top;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface); }
+.data-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); white-space: nowrap; font-weight: 500; }
+.data-table td strong { color: var(--text); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px 0; }
+  .content { padding: 24px 20px 80px; }
+  .hero { padding: 48px 20px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar-container">
+  <div class="progress-bar-fill" id="progressBar"></div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Presenter Only · 60-Min Session</div>
+  <h1>Instructor Guide —<br>Containers on AWS</h1>
+  <p class="hero-sub">Everything you need to set up, run, and recover from the demo.</p>
+</div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section-title">Before the Demo</div>
+    <a class="sidebar-link level-b active" onclick="scrollTo('s1')">
+      <span class="dot"></span>IAM Permissions
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s2')">
+      <span class="dot"></span>Local Setup
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s3')">
+      <span class="dot"></span>Pre-Load Tabs
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s4')">
+      <span class="dot"></span>Dry Run
+    </a>
+
+    <div class="sidebar-section-title">During the Demo</div>
+    <a class="sidebar-link level-i" onclick="scrollTo('s5')">
+      <span class="dot"></span>Timing Guide
+    </a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s6')">
+      <span class="dot"></span>Live Demo Commands
+    </a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s7')">
+      <span class="dot"></span>ECS Console Steps
+    </a>
+
+    <div class="sidebar-section-title">Recovery</div>
+    <a class="sidebar-link level-a" onclick="scrollTo('s8')">
+      <span class="dot"></span>Recovery Tips
+    </a>
+    <a class="sidebar-link level-a" onclick="scrollTo('s9')">
+      <span class="dot"></span>Common Q&amp;A
+    </a>
+    <div class="sidebar-section-title">AWS Prerequisites</div>
+    <a class="sidebar-link level-b" onclick="scrollTo('s10')">
+      <span class="dot"></span>Task Execution Role
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s11')">
+      <span class="dot"></span>VPC &amp; Networking
+    </a>
+  </nav>
+
+  <main class="content">
+
+    <!-- PHASE: BEFORE THE DEMO -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label b">Before the Demo</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- SECTION 1: IAM Permissions -->
+    <div class="section" id="s1" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">01</div>
+        <div class="section-title-wrap">
+          <h2>IAM Permissions</h2>
+          <span class="level-tag b">Pre-Demo · Setup</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Required Managed Policies</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Your AWS account or IAM user needs the following managed policies attached before the session begins. Verify these in the IAM console under your user or role.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>AmazonEC2ContainerRegistryFullAccess</strong> — push/pull/manage ECR repositories and images</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>AmazonECS_FullAccess</strong> — create clusters, task definitions, and services</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>AmazonVPCFullAccess</strong> — configure security groups and networking for ECS tasks</li>
+            </ul>
+            <div class="info-box"><div class="tip-icon">💡</div><div>Admin access also works. In a real environment, scope permissions to least privilege — these managed policies are broader than strictly required for this demo.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Verify Permissions Before You Present</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run a quick smoke test the day before your session to confirm your credentials can reach ECR and ECS. Never discover a permissions issue live in front of an audience.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Verify ECR access</span>
+<span class="cmd">aws</span> ecr describe-repositories <span class="flag">--region</span> us-east-1
+
+<span class="cmt"># Verify ECS access</span>
+<span class="cmd">aws</span> ecs list-clusters <span class="flag">--region</span> us-east-1</pre>
+            </div>
+            <p>Both commands should return JSON output — not an access-denied error.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: Local Setup -->
+    <div class="section" id="s2" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">02</div>
+        <div class="section-title-wrap">
+          <h2>Local Setup</h2>
+          <span class="level-tag b">Pre-Demo · Setup</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Docker Desktop — Installed and Running</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Docker Desktop must be fully running before the session — not just installed. The menu bar icon should show a running engine, not a startup animation.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Docker Desktop installed (download from docker.com/products/docker-desktop)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Docker Desktop is actively running (system tray icon is green/white)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><code>docker info</code> returns engine details (not an error)</li>
+            </ul>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — verify Docker</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> docker info</div>
+                <div class="out">Client: Docker Engine - Community</div>
+                <div class="out"> Version:    27.3.1</div>
+                <div class="out"> Context:    desktop-linux</div>
+                <div class="out">Server:</div>
+                <div class="out"> Engine:</div>
+                <div class="out">  Version:  27.3.1</div>
+                <div class="success">  Status:   running</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">AWS CLI — Installed and Configured</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>The AWS CLI must be configured with credentials that have the IAM permissions from Section 1. Run <code>aws configure</code> if you have not already done so.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>AWS CLI v2 installed (<code>aws --version</code> returns output)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Credentials configured with the correct region (<code>us-east-1</code>)</li>
+            </ul>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — aws configure</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> aws configure</div>
+                <div class="out">AWS Access Key ID [None]: AKIA...</div>
+                <div class="out">AWS Secret Access Key [None]: ****</div>
+                <div class="out">Default region name [None]: us-east-1</div>
+                <div class="out">Default output format [None]: json</div>
+                <div class="success">Configuration saved.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Verify ECR Auth Token</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Before the session, confirm you can retrieve a valid ECR authentication token. The command should print a long token string — if it errors, fix your credentials now.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">aws</span> ecr get-login-password <span class="flag">--region</span> us-east-1</pre>
+            </div>
+            <div class="tip"><div class="tip-icon">✅</div><div>The ECR auth token is valid for <strong>12 hours</strong>. If your demo runs past that window, re-run <code>aws ecr get-login-password</code> and pipe it to <code>docker login</code> again.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Pre-Create the ECR Repository</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Create the ECR repository before the session so the push command is ready to go. Do not create it live — it saves time and avoids potential name conflicts.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">aws</span> ecr create-repository \
+  <span class="flag">--repository-name</span> containers-demo \
+  <span class="flag">--region</span> us-east-1</pre>
+            </div>
+            <p>The output will include a <code>repositoryUri</code> field. Note that value — you will use it when tagging and pushing the image during the demo.</p>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — expected output excerpt</span>
+              </div>
+              <div class="terminal-body">
+                <div class="out">{</div>
+                <div class="out">  "repository": {</div>
+                <div class="info">    "repositoryUri": "123456789.dkr.ecr.us-east-1.amazonaws.com/containers-demo",</div>
+                <div class="out">    "repositoryName": "containers-demo",</div>
+                <div class="out">    "registryId": "123456789"</div>
+                <div class="out">  }</div>
+                <div class="out">}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Browser Tabs -->
+    <div class="section" id="s3" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">03</div>
+        <div class="section-title-wrap">
+          <h2>Browser Tabs to Pre-Load</h2>
+          <span class="level-tag b">Pre-Demo · Setup</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Open All Tabs Before You Start Presenting</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Pre-load all tabs so you can switch instantly without losing the audience while a page loads. Have the terminal ready in the correct directory.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>Slide deck</strong> — open <code>containers/presentation/slides.html</code> directly in the browser; navigate with arrow keys</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>AWS Console → ECR</strong> — navigate to ECR in <code>us-east-1</code>; confirm the <code>containers-demo</code> repo is listed</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>AWS Console → ECS</strong> — navigate to ECS in <code>us-east-1</code>; the Clusters list should be open</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>Terminal window</strong> — open in the <code>containers/</code> directory (not <code>cicd/</code>)</li>
+            </ul>
+            <div class="tip"><div class="tip-icon">✅</div><div>Use a single browser window with tabs in the order you will switch to them: Slides → ECR → ECS. Minimise all other applications before you share your screen.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: Dry Run -->
+    <div class="section" id="s4" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">04</div>
+        <div class="section-title-wrap">
+          <h2>Dry Run</h2>
+          <span class="level-tag b">Pre-Demo · Verification</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Full Local Build Test</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run the complete build-and-run sequence at least once the day before your session. This confirms the Dockerfile is valid, the image builds cleanly, and the app serves on port 8080.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># From containers/ directory</span>
+<span class="cmd">docker</span> build <span class="flag">-t</span> containers-demo .
+<span class="cmd">docker</span> run <span class="flag">-p</span> 8080:80 containers-demo
+<span class="cmt"># Verify http://localhost:8080 loads correctly</span>
+<span class="cmt"># Ctrl+C to stop when done</span></pre>
+            </div>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><code>docker build</code> completes without errors</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><code>http://localhost:8080</code> loads the demo app in the browser</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Container stopped cleanly after verification</li>
+            </ul>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>If the dry run fails, fix the issue before the session. Never debug a broken Docker build in front of an audience — it derails the narrative and burns your timing buffer.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE: DURING THE DEMO -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label i">During the Demo</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- SECTION 5: Timing Guide -->
+    <div class="section" id="s5" data-level="intermediate">
+      <div class="section-header">
+        <div class="step-number">05</div>
+        <div class="section-title-wrap">
+          <h2>Timing Guide</h2>
+          <span class="level-tag i">During · 60 Min</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">1</div>
+            <div class="step-title">Full Session Breakdown</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Use this table as your in-session reference. Keep it open on a secondary monitor or phone if possible.</p>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Segment</th>
+                  <th>Pacing Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>0–8 min</td>
+                  <td><strong>Intro + container concepts</strong></td>
+                  <td>Don't rush VM vs Container — it's the conceptual foundation everything else builds on</td>
+                </tr>
+                <tr>
+                  <td>8–15 min</td>
+                  <td><strong>Docker basics</strong></td>
+                  <td>Walk through the Dockerfile line by line; explain FROM, COPY, EXPOSE, CMD</td>
+                </tr>
+                <tr>
+                  <td>15–22 min</td>
+                  <td><strong>AWS services overview</strong></td>
+                  <td>1–2 sentences per service; keep ECR, ECS, EKS, App Runner high-level — detail comes in the demo</td>
+                </tr>
+                <tr>
+                  <td>22–35 min</td>
+                  <td><strong>Live demo part 1 — build + push</strong></td>
+                  <td>Narrate every command before running it; show the ECR console after the push to confirm the image</td>
+                </tr>
+                <tr>
+                  <td>35–52 min</td>
+                  <td><strong>Live demo part 2 — ECS console</strong></td>
+                  <td>Click deliberately — beginners read every field; say each setting aloud before entering it</td>
+                </tr>
+                <tr>
+                  <td>52–57 min</td>
+                  <td><strong>EKS vs App Runner</strong></td>
+                  <td>Contrast with ECS; introduce EKS Auto Mode (2025) briefly; reinforce when you'd choose each</td>
+                </tr>
+                <tr>
+                  <td>57–60 min</td>
+                  <td><strong>Q&amp;A</strong></td>
+                  <td>See Common Questions section — most questions are already covered there</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="tip"><div class="tip-icon">✅</div><div><strong>If behind at the 45-min mark:</strong> skip ECS Service creation. Show the ECR console with the pushed image and explain what ECS would do. This saves 5–7 minutes without losing the conceptual arc.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 6: Live Demo Commands -->
+    <div class="section" id="s6" data-level="intermediate">
+      <div class="section-header">
+        <div class="step-number">06</div>
+        <div class="section-title-wrap">
+          <h2>Live Demo Commands</h2>
+          <span class="level-tag i">During · Command Reference</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">1</div>
+            <div class="step-title">Part 1 — Authenticate, Tag, and Push to ECR</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Copy and run this block in sequence. Always narrate what each command does before pressing enter — do not just run it silently.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Capture account ID and region into variables</span>
+<span class="key">AWS_ACCOUNT_ID</span>=$(<span class="cmd">aws</span> sts get-caller-identity <span class="flag">--query</span> Account <span class="flag">--output</span> text)
+<span class="key">REGION</span>=us-east-1
+
+<span class="cmt"># Authenticate Docker to ECR (token valid 12 hours)</span>
+<span class="cmd">aws</span> ecr get-login-password <span class="flag">--region</span> $REGION \
+  | <span class="cmd">docker</span> login <span class="flag">--username</span> AWS <span class="flag">--password-stdin</span> \
+    $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+<span class="cmt"># Tag the local image with the full ECR URI</span>
+<span class="cmd">docker</span> tag containers-demo:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest
+
+<span class="cmt"># Push the image to ECR</span>
+<span class="cmd">docker</span> push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">2</div>
+            <div class="step-title">Part 2 — Cleanup After the Session</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run this after the session ends to delete the pushed image and avoid ongoing ECR storage charges. Also stop the ECS service in the console.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Delete the pushed image from ECR</span>
+<span class="cmd">aws</span> ecr batch-delete-image \
+  <span class="flag">--repository-name</span> containers-demo \
+  <span class="flag">--region</span> us-east-1 \
+  <span class="flag">--image-ids</span> imageTag=latest</pre>
+            </div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>Also stop the ECS Service via the console (set desired tasks to 0 or delete the service) to prevent Fargate compute charges from accumulating after the demo ends.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 7: ECS Console Steps -->
+    <div class="section" id="s7" data-level="intermediate">
+      <div class="section-header">
+        <div class="step-number">07</div>
+        <div class="section-title-wrap">
+          <h2>ECS Console Steps</h2>
+          <span class="level-tag i">During · Console Walkthrough</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">A</div>
+            <div class="step-title">Step 7a — Create Cluster</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Navigate to <strong>ECS → Clusters → Create Cluster</strong>. Fill in the fields below and click Create. Wait for the cluster status to show <strong>Active</strong> before continuing.</p>
+            <table class="data-table">
+              <thead>
+                <tr><th>Field</th><th>Value</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Cluster name</td><td><strong>containers-demo-cluster</strong></td></tr>
+                <tr><td>Infrastructure</td><td><strong>AWS Fargate</strong> (serverless)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">B</div>
+            <div class="step-title">Step 7b — Create Task Definition</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Navigate to <strong>ECS → Task Definitions → Create new task definition</strong>. Use the values below. Paste the ECR image URI you noted in Section 2.</p>
+            <table class="data-table">
+              <thead>
+                <tr><th>Field</th><th>Value</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Task definition name</td><td><strong>containers-demo-task</strong></td></tr>
+                <tr><td>Launch type</td><td><strong>Fargate</strong></td></tr>
+                <tr><td>CPU</td><td><strong>0.5 vCPU</strong></td></tr>
+                <tr><td>Memory</td><td><strong>1 GB</strong></td></tr>
+                <tr><td>Container name</td><td><strong>web</strong></td></tr>
+                <tr><td>Image URI</td><td>Paste the ECR <code>repositoryUri</code> + <code>:latest</code></td></tr>
+                <tr><td>Port mappings</td><td><strong>80</strong> / TCP</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">C</div>
+            <div class="step-title">Step 7c — Create ECS Service</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Navigate to <strong>Clusters → containers-demo-cluster → Services tab → Create</strong>. Fill in the networking settings carefully — this is where most mistakes happen during demos.</p>
+            <table class="data-table">
+              <thead>
+                <tr><th>Field</th><th>Value</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Launch type</td><td><strong>Fargate</strong></td></tr>
+                <tr><td>Task definition</td><td><strong>containers-demo-task</strong> (latest revision)</td></tr>
+                <tr><td>Service name</td><td><strong>containers-demo-service</strong></td></tr>
+                <tr><td>Desired tasks</td><td><strong>1</strong></td></tr>
+                <tr><td>VPC</td><td>Default VPC</td></tr>
+                <tr><td>Subnets</td><td>Select all <strong>public</strong> subnets</td></tr>
+                <tr><td>Security group</td><td>Create new — allow inbound <strong>TCP 80</strong> from <code>0.0.0.0/0</code></td></tr>
+                <tr><td>Public IP</td><td><strong>Enabled</strong></td></tr>
+              </tbody>
+            </table>
+            <p>After clicking Create, wait approximately 2 minutes for the task to reach <strong>RUNNING</strong> status. Click the running task and copy the <strong>Public IP</strong> to open the app in the browser.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE: RECOVERY -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label a">Recovery</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- SECTION 8: Recovery Tips -->
+    <div class="section" id="s8" data-level="advanced">
+      <div class="section-header">
+        <div class="step-number">08</div>
+        <div class="section-title-wrap">
+          <h2>Recovery Tips</h2>
+          <span class="level-tag a">If Things Go Wrong</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">1</div>
+            <div class="step-title">Common Problems and Fixes</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>If something breaks live, stay calm, narrate what you are investigating, and use this table. The audience learns from watching recovery — it is not a failure.</p>
+            <table class="data-table">
+              <thead>
+                <tr><th>Problem</th><th>Fix</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>ECR auth fails</td>
+                  <td>Re-run <code>aws ecr get-login-password</code>. Verify <code>$REGION</code> matches the region where you created the repo. Check that your CLI credentials have not expired.</td>
+                </tr>
+                <tr>
+                  <td>Task stuck PENDING</td>
+                  <td>Check the security group allows inbound TCP 80. Verify the task execution IAM role (<code>ecsTaskExecutionRole</code>) is attached to the task definition.</td>
+                </tr>
+                <tr>
+                  <td>Task keeps stopping</td>
+                  <td>Click the stopped task → <strong>Logs tab</strong> → read the error message. Common causes: wrong image URI, container crash on startup, or missing environment variables.</td>
+                </tr>
+                <tr>
+                  <td>Running out of time</td>
+                  <td>Skip ECS Service creation. Show the ECR console with the pushed image. Say: "From here, ECS would pull this image, schedule it on Fargate, and expose it via a public IP."</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 9: Common Q&A -->
+    <div class="section" id="s9" data-level="advanced">
+      <div class="section-header">
+        <div class="step-number">09</div>
+        <div class="section-title-wrap">
+          <h2>Common Beginner Questions</h2>
+          <span class="level-tag a">Q&amp;A Prep</span>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">1</div>
+            <div class="step-title">What's the difference between ECS and EKS?</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>ECS</strong> is AWS's simpler, fully managed native orchestrator — no Kubernetes knowledge required. Great for teams new to containers.</p>
+            <p><strong>EKS</strong> runs Kubernetes on AWS — more powerful and portable across clouds, but steeper learning curve. In 2025, <strong>EKS Auto Mode</strong> removes most of the operational overhead: node provisioning, scaling, and upgrades are automated. Current version is <strong>1.35</strong>.</p>
+            <p>Recommended framing: start with ECS; graduate to EKS when you need Kubernetes-native features or multi-cloud portability.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">2</div>
+            <div class="step-title">Do I need Docker installed on Fargate?</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>No. With Fargate, AWS manages the underlying compute entirely. You never SSH into a server, never install Docker on it, and never patch the OS.</p>
+            <p>You only provide the container image URI. Fargate pulls it from ECR, schedules it on managed infrastructure, and exposes it via the networking config you defined.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">3</div>
+            <div class="step-title">How much does this cost?</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Fargate charges for the vCPU and memory your task uses while it is running:</p>
+            <ul>
+              <li>vCPU: <strong>$0.04048 per vCPU per hour</strong></li>
+              <li>Memory: <strong>$0.004445 per GB per hour</strong></li>
+            </ul>
+            <p>For this demo (0.5 vCPU / 1 GB): approximately <strong>$0.024 per hour</strong>. Left running for 24 hours it would cost about $0.58 — but remind attendees to stop the service immediately after the demo.</p>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>Stop the ECS Service after every demo run. A task left running overnight will accumulate real charges even on a demo account.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">4</div>
+            <div class="step-title">How does it scale?</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECS Service Auto Scaling uses <strong>CloudWatch alarms</strong> to add or remove tasks automatically. You define:</p>
+            <ul>
+              <li><strong>Scaling metric:</strong> CPU utilization, memory utilization, or custom application metrics</li>
+              <li><strong>Thresholds:</strong> e.g., scale out when CPU &gt; 70% for 2 minutes</li>
+              <li><strong>Min / Max task count:</strong> the bounds ECS will not cross when scaling</li>
+            </ul>
+            <p>When the alarm triggers, ECS launches new tasks (up to max). When load drops, it terminates tasks (down to min). Fargate provisions and deprovisions compute automatically — no servers to manage.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">5</div>
+            <div class="step-title">What about HTTPS?</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>For production HTTPS, put an <strong>Application Load Balancer (ALB)</strong> in front of the ECS service. Attach an <strong>ACM (AWS Certificate Manager)</strong> certificate to the ALB HTTPS listener.</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node green">Client (HTTPS)</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node accent">ALB + ACM cert<br><small style="font-weight:400;font-size:11px;">TLS termination</small></div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node orange">ECS task<br><small style="font-weight:400;font-size:11px;">HTTP port 80</small></div>
+              </div>
+            </div>
+            <p>The ALB handles TLS termination — your container stays simple, serving plain HTTP on port 80. This is the standard production pattern for containerized apps on AWS.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE DIVIDER -->
+    <div class="phase-divider"><div class="phase-divider-line"></div><div class="phase-label b">AWS Prerequisites — Roles &amp; Networking</div><div class="phase-divider-line"></div></div>
+
+    <!-- SECTION 10: ECS TASK EXECUTION ROLE -->
+    <div class="section" id="s10">
+      <div class="section-header">
+        <div class="step-number">10</div>
+        <div class="section-title-wrap">
+          <h2>ECS Task Execution Role</h2>
+          <span class="level-tag b">Create Once Per Account</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Why This Role Is Required</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>The <strong>ECS Task Execution Role</strong> (<code>ecsTaskExecutionRole</code>) is an IAM role that ECS assumes to perform infrastructure tasks on your behalf when launching a Fargate task:</p>
+            <ul>
+              <li>Pull your Docker image from <strong>Amazon ECR</strong> (your private registry)</li>
+              <li>Write container stdout/stderr to <strong>CloudWatch Logs</strong></li>
+              <li>Pull secrets from <strong>Secrets Manager</strong> or <strong>SSM Parameter Store</strong> (if configured)</li>
+            </ul>
+            <div class="info-box"><div class="tip-icon">💡</div><div>Without this role, Fargate <strong>cannot pull the image</strong> from ECR. The task will either get stuck in PENDING or fail immediately with an authorization error in the stopped reason. This is the most common first-time setup mistake.</div></div>
+            <p>This is different from the <strong>Task Role</strong> (which grants permissions to code running <em>inside</em> your container). The execution role is infrastructure-level; the task role is application-level.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Check if the Role Already Exists</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run this before the session. If the role exists you can skip creation.</p>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws iam get-role --role-name ecsTaskExecutionRole --query \"Role.Arn\" --output text')">Copy</button></div>
+              <pre><span class="cmd">aws iam get-role</span> \
+  <span class="flag">--role-name</span> <span class="str">ecsTaskExecutionRole</span> \
+  <span class="flag">--query</span> <span class="str">"Role.Arn"</span> \
+  <span class="flag">--output</span> text</pre>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div><span class="terminal-title">Terminal</span></div>
+              <div class="terminal-body">
+                <div class="success">✓ arn:aws:iam::123456789012:role/ecsTaskExecutionRole — role exists, skip to step 4.</div>
+                <div class="warn">⚠ An error occurred (NoSuchEntity) — create the role using steps 3 below.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Create the Role via AWS Console</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Navigate: <strong>IAM → Roles → Create role</strong></p>
+            <ol>
+              <li>Trusted entity type: <strong>AWS service</strong></li>
+              <li>Service: scroll to <strong>Elastic Container Service</strong></li>
+              <li>Use case: <strong>Elastic Container Service Task</strong> → click <strong>Next</strong></li>
+              <li>Search permissions: type <code>AmazonECSTaskExecutionRolePolicy</code> → check the box</li>
+              <li>Click <strong>Next</strong></li>
+              <li>Role name: <code><strong>ecsTaskExecutionRole</strong></code> (exact — ECS looks for this name by default)</li>
+              <li>Click <strong>Create role</strong></li>
+            </ol>
+            <div class="tip"><div class="tip-icon">✅</div><div>Alternatively, create it via CLI in under 30 seconds — use step 4 instead if you prefer the terminal.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Create the Role via CLI (Faster)</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Three commands — create the trust policy file, create the role, attach the policy:</p>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, `# Step 1: Create trust policy\ncat > /tmp/ecs-trust.json << 'EOF'\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [{\n    \"Effect\": \"Allow\",\n    \"Principal\": { \"Service\": \"ecs-tasks.amazonaws.com\" },\n    \"Action\": \"sts:AssumeRole\"\n  }]\n}\nEOF\n\n# Step 2: Create the role\naws iam create-role \\\n  --role-name ecsTaskExecutionRole \\\n  --assume-role-policy-document file:///tmp/ecs-trust.json\n\n# Step 3: Attach the policy\naws iam attach-role-policy \\\n  --role-name ecsTaskExecutionRole \\\n  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy`)">Copy</button></div>
+              <pre><span class="cmt"># Step 1: Create the trust policy document</span>
+<span class="cmd">cat</span> > /tmp/ecs-trust.json &lt;&lt; <span class="str">'EOF'</span>
+{
+  <span class="key">"Version"</span>: <span class="str">"2012-10-17"</span>,
+  <span class="key">"Statement"</span>: [{
+    <span class="key">"Effect"</span>: <span class="str">"Allow"</span>,
+    <span class="key">"Principal"</span>: { <span class="key">"Service"</span>: <span class="str">"ecs-tasks.amazonaws.com"</span> },
+    <span class="key">"Action"</span>: <span class="str">"sts:AssumeRole"</span>
+  }]
+}
+EOF
+
+<span class="cmt"># Step 2: Create the IAM role</span>
+<span class="cmd">aws iam create-role</span> \
+  <span class="flag">--role-name</span> <span class="str">ecsTaskExecutionRole</span> \
+  <span class="flag">--assume-role-policy-document</span> file:///tmp/ecs-trust.json
+
+<span class="cmt"># Step 3: Attach the AWS managed execution policy</span>
+<span class="cmd">aws iam attach-role-policy</span> \
+  <span class="flag">--role-name</span> <span class="str">ecsTaskExecutionRole</span> \
+  <span class="flag">--policy-arn</span> <span class="str">arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy</span></pre>
+            </div>
+            <div class="tip"><div class="tip-icon">✅</div><div>Run this as a pre-demo checklist item the day before, not live in front of the audience.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">5</div>
+            <div class="step-title">Attach the Role in the Task Definition</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>When creating the Task Definition in the ECS console, find the <strong>"Task execution role"</strong> dropdown and select <code>ecsTaskExecutionRole</code>.</p>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>If the dropdown is empty or the role is missing, it means the role does not exist in this region's account or was created with a different name. Re-run the CLI check in step 2.</div></div>
+            <p>During the demo, if a task goes STOPPED immediately — first check: is <code>ecsTaskExecutionRole</code> attached to the task definition? Click the task → <strong>Stopped reason</strong> → look for <code>CannotPullContainerError</code> or <code>AccessDeniedException</code>.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 11: VPC & NETWORKING -->
+    <div class="section" id="s11">
+      <div class="section-header">
+        <div class="step-number">11</div>
+        <div class="section-title-wrap">
+          <h2>VPC &amp; Networking Setup</h2>
+          <span class="level-tag b">Verify Before the Session</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Verify the Default VPC and Subnets</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>The demo uses the <strong>default VPC</strong> — every AWS region has one. Run this pre-session to confirm it exists and has public subnets:</p>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query \"Vpcs[0].{VpcId:VpcId,State:State}\" --output table')">Copy</button></div>
+              <pre><span class="cmt"># Verify default VPC</span>
+<span class="cmd">aws ec2 describe-vpcs</span> \
+  <span class="flag">--filters</span> <span class="str">Name=isDefault,Values=true</span> \
+  <span class="flag">--query</span> <span class="str">"Vpcs[0].{VpcId:VpcId,State:State}"</span> \
+  <span class="flag">--output</span> table
+
+<span class="cmt"># Verify public subnets exist</span>
+<span class="cmd">aws ec2 describe-subnets</span> \
+  <span class="flag">--filters</span> <span class="str">Name=default-for-az,Values=true</span> \
+  <span class="flag">--query</span> <span class="str">"Subnets[*].[SubnetId,AvailabilityZone,MapPublicIpOnLaunch]"</span> \
+  <span class="flag">--output</span> table</pre>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div><span class="terminal-title">Terminal — expected output</span></div>
+              <div class="terminal-body">
+                <div class="success">✓ VPC State: available</div>
+                <div class="success">✓ 2–6 subnets returned, MapPublicIpOnLaunch = True</div>
+                <div class="warn">⚠ If no subnets: run aws ec2 create-default-subnet --availability-zone us-east-1a</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Create the Security Group (Pre-Session)</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Create a dedicated security group for the demo container. Do this before the session so you don't create it live (reduces console steps and errors).</p>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, `VPC_ID=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query \"Vpcs[0].VpcId\" --output text)\n\nSG_ID=$(aws ec2 create-security-group \\\n  --group-name containers-demo-sg \\\n  --description \"Allow HTTP port 80 for ECS Fargate demo\" \\\n  --vpc-id $VPC_ID \\\n  --query GroupId --output text)\n\naws ec2 authorize-security-group-ingress \\\n  --group-id $SG_ID \\\n  --protocol tcp \\\n  --port 80 \\\n  --cidr 0.0.0.0/0\n\necho \"Security Group ID: $SG_ID\"`)">Copy</button></div>
+              <pre><span class="cmt"># Get the default VPC ID</span>
+<span class="key">VPC_ID</span>=$(<span class="cmd">aws ec2 describe-vpcs</span> \
+  <span class="flag">--filters</span> <span class="str">Name=isDefault,Values=true</span> \
+  <span class="flag">--query</span> <span class="str">"Vpcs[0].VpcId"</span> <span class="flag">--output</span> text)
+
+<span class="cmt"># Create the security group</span>
+<span class="key">SG_ID</span>=$(<span class="cmd">aws ec2 create-security-group</span> \
+  <span class="flag">--group-name</span> <span class="str">containers-demo-sg</span> \
+  <span class="flag">--description</span> <span class="str">"Allow HTTP port 80 for ECS Fargate demo"</span> \
+  <span class="flag">--vpc-id</span> <span class="str">$VPC_ID</span> \
+  <span class="flag">--query</span> GroupId <span class="flag">--output</span> text)
+
+<span class="cmt"># Allow inbound HTTP on port 80</span>
+<span class="cmd">aws ec2 authorize-security-group-ingress</span> \
+  <span class="flag">--group-id</span> <span class="str">$SG_ID</span> \
+  <span class="flag">--protocol</span> tcp \
+  <span class="flag">--port</span> <span class="num">80</span> \
+  <span class="flag">--cidr</span> <span class="str">0.0.0.0/0</span>
+
+<span class="cmd">echo</span> <span class="str">"Security Group ID: $SG_ID"</span></pre>
+            </div>
+            <div class="tip"><div class="tip-icon">✅</div><div>Save the <code>SG_ID</code> value — you'll select this security group when creating the ECS Service during the demo. Do NOT delete the default outbound rule; ECS needs it to pull from ECR.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">CloudWatch Log Group Setup</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECS can create the CloudWatch log group automatically when the first task starts, but creating it upfront avoids a common "ResourceNotFoundException" on first launch.</p>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws logs create-log-group --log-group-name /ecs/containers-demo-task --region us-east-1')">Copy</button></div>
+              <pre><span class="cmd">aws logs create-log-group</span> \
+  <span class="flag">--log-group-name</span> <span class="str">/ecs/containers-demo-task</span> \
+  <span class="flag">--region</span> us-east-1</pre>
+            </div>
+            <p>In the Task Definition console, enable logging with these settings:</p>
+            <ul>
+              <li>Log driver: <strong>awslogs</strong></li>
+              <li>awslogs-group: <code>/ecs/containers-demo-task</code></li>
+              <li>awslogs-region: <code>us-east-1</code></li>
+              <li>awslogs-stream-prefix: <code>ecs</code></li>
+            </ul>
+            <p>After the task runs, view logs: <strong>CloudWatch → Log groups → /ecs/containers-demo-task</strong>. Show this to the audience — it demonstrates that Fargate still gives you full observability without managing servers.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Complete Pre-Session Infrastructure Checklist</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run through all of these the day before the demo:</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Default VPC exists in us-east-1 (<code>aws ec2 describe-vpcs --filters Name=isDefault,Values=true</code>)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>At least 2 public subnets exist in the default VPC</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><code>ecsTaskExecutionRole</code> IAM role exists (<code>aws iam get-role --role-name ecsTaskExecutionRole</code>)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Security group <code>containers-demo-sg</code> created with port 80 inbound</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>ECR repository <code>containers-demo</code> created</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>CloudWatch log group <code>/ecs/containers-demo-task</code> created</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Docker image built and pushed to ECR (pre-push to avoid network issues live)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Test task definition created and one task run successfully</li>
+            </ul>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>Do a <strong>full dry run</strong> the day before — create the cluster, task definition, and service, confirm the app loads via public IP, then delete the service (keep the cluster and task definition). This way the demo infrastructure is validated and you only need to create the service live.</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function toggleStep(header) {
+  const step = header.parentElement;
+  step.classList.toggle('open');
+}
+
+function filterLevel(level) {
+  document.querySelectorAll('.level-pill').forEach(p => p.classList.remove('active'));
+  if (level === 'all') {
+    document.querySelector('.level-pill.all-btn').classList.add('active');
+  } else {
+    document.querySelector(`.level-pill.${level}`).classList.add('active');
+  }
+  document.querySelectorAll('.section').forEach(s => {
+    if (level === 'all') {
+      s.classList.remove('hidden');
+    } else {
+      s.classList.toggle('hidden', s.dataset.level !== level);
+    }
+  });
+  document.querySelectorAll('.phase-divider').forEach(d => {
+    d.style.display = level === 'all' ? 'flex' : 'none';
+  });
+}
+
+function copyCode(btn, text) {
+  if (!text) {
+    const pre = btn.closest('.code-block, .skill-showcase')?.querySelector('pre, .skill-showcase-body');
+    text = pre ? pre.innerText : '';
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+window.addEventListener('scroll', () => {
+  const fill = document.getElementById('progressBar');
+  if (fill) {
+    const pct = Math.min(100, (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    fill.style.width = pct + '%';
+  }
+});
+
+const sections = document.querySelectorAll('.section[id]');
+const sidebarLinks = document.querySelectorAll('.sidebar-link');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      sidebarLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('onclick')?.includes(id));
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+
+document.querySelectorAll('.steps .step:first-child').forEach(step => {
+  step.classList.add('open');
+});
+</script>
+</body>
+</html>

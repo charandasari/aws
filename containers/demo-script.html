@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Script — Containers on AWS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --surface: #f6f7fb;
+  --surface2: #eceef7;
+  --surface3: #e2e5f0;
+  --border: #dde1ee;
+  --border-bright: #c2c8df;
+  --text: #12152a;
+  --text-muted: #44495f;
+  --text-dim: #8e94ae;
+  --accent: #4f46e5;
+  --accent2: #0d9a74;
+  --accent3: #c97a0a;
+  --accent4: #dc2626;
+  --beginner: #0d9a74;
+  --intermediate: #4f46e5;
+  --advanced: #c97a0a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Lora', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* PROGRESS BAR */
+.progress-bar-container {
+  position: sticky; top: 0; z-index: 100;
+  height: 3px; background: var(--border);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--beginner), var(--accent), var(--advanced));
+  width: 0%; transition: width 0.1s;
+}
+
+/* HERO */
+.hero {
+  position: relative; padding: 80px 40px 60px;
+  text-align: center;
+  background: linear-gradient(180deg, #eef0fb 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--border); overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -80px; left: 50%;
+  transform: translateX(-50%); width: 600px; height: 300px;
+  background: radial-gradient(ellipse, rgba(79,70,229,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(79,70,229,0.08); border: 1px solid rgba(79,70,229,0.2);
+  border-radius: 100px; padding: 6px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 28px;
+}
+.hero-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.hero h1 {
+  font-family: 'Syne', sans-serif; font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800; line-height: 1.05; letter-spacing: -2px; margin-bottom: 20px;
+  background: linear-gradient(135deg, #12152a 0%, #3730a3 50%, #4f46e5 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero-sub {
+  font-size: 18px; color: var(--text-muted); max-width: 560px;
+  margin: 0 auto 40px; line-height: 1.7; font-style: italic;
+}
+
+/* LEVEL PILLS (optional — only add if content has tiers) */
+.level-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.level-pill {
+  padding: 8px 20px; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; border: 1.5px solid;
+}
+.level-pill.beginner    { color: var(--beginner);    border-color: var(--beginner);    background: rgba(13,154,116,0.06); }
+.level-pill.intermediate{ color: var(--intermediate); border-color: var(--intermediate); background: rgba(79,70,229,0.06); }
+.level-pill.advanced    { color: var(--advanced);    border-color: var(--advanced);    background: rgba(201,122,10,0.06); }
+.level-pill.all-btn     { color: var(--text-muted);  border-color: var(--border-bright); background: var(--surface); }
+.level-pill:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.level-pill.active.beginner     { background: rgba(13,154,116,0.14); }
+.level-pill.active.intermediate { background: rgba(79,70,229,0.14); }
+.level-pill.active.advanced     { background: rgba(201,122,10,0.14); }
+.level-pill.active.all-btn      { background: var(--surface2); color: var(--text); }
+
+/* LAYOUT */
+.layout { display: grid; grid-template-columns: 260px 1fr; max-width: 1200px; margin: 0 auto; }
+
+/* SIDEBAR */
+.sidebar {
+  position: sticky; top: 3px; height: calc(100vh - 3px); overflow-y: auto;
+  padding: 32px 0; border-right: 1px solid var(--border);
+  background: var(--surface); scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar-section-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim); padding: 0 20px; margin: 24px 0 8px;
+}
+.sidebar-link {
+  display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+  font-family: 'Syne', sans-serif; font-size: 13px;
+  color: var(--text-muted); text-decoration: none;
+  cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent;
+}
+.sidebar-link:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+.sidebar-link.active { color: var(--text); background: rgba(79,70,229,0.06); border-left-color: var(--accent); }
+.sidebar-link .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-link.level-b .dot { background: var(--beginner); }
+.sidebar-link.level-i .dot { background: var(--intermediate); }
+.sidebar-link.level-a .dot { background: var(--advanced); }
+
+/* CONTENT */
+.content { padding: 40px 48px 120px; max-width: 820px; }
+
+/* SECTION */
+.section { margin-bottom: 72px; animation: fadeIn 0.4s ease both; }
+.section.hidden { display: none; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.section-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
+.step-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--text-dim); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; flex-shrink: 0; margin-top: 6px;
+}
+.section-title-wrap h2 {
+  font-family: 'Syne', sans-serif; font-size: 28px;
+  font-weight: 800; letter-spacing: -0.5px; color: var(--text); line-height: 1.2;
+}
+.level-tag {
+  display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 4px; margin-top: 6px; font-weight: 700;
+}
+.level-tag.b { color: var(--beginner);    background: rgba(13,154,116,0.08); border: 1px solid rgba(13,154,116,0.2); }
+.level-tag.i { color: var(--intermediate); background: rgba(79,70,229,0.08);  border: 1px solid rgba(79,70,229,0.2); }
+.level-tag.a { color: var(--advanced);    background: rgba(201,122,10,0.08); border: 1px solid rgba(201,122,10,0.2); }
+
+/* STEPS */
+.steps { display: flex; flex-direction: column; gap: 16px; }
+.step {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.step:hover { border-color: var(--border-bright); box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.step-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; cursor: pointer; user-select: none; background: #fff;
+}
+.step-num {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.step-num.b { background: rgba(13,154,116,0.10);  color: var(--beginner); }
+.step-num.i { background: rgba(79,70,229,0.10);   color: var(--intermediate); }
+.step-num.a { background: rgba(201,122,10,0.10);  color: var(--advanced); }
+.step-num.n { background: var(--surface2); color: var(--text-dim); }
+.step-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+.step-toggle {
+  width: 20px; height: 20px; color: var(--text-dim); transition: transform 0.2s;
+  font-size: 18px; line-height: 20px; text-align: center; flex-shrink: 0;
+}
+.step.open .step-toggle { transform: rotate(180deg); }
+.step-body {
+  display: none; padding: 0 20px 20px; border-top: 1px solid var(--border);
+  animation: slideDown 0.2s ease; background: #fff;
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.step.open .step-body { display: block; }
+.step-body p { color: var(--text-muted); font-size: 15px; line-height: 1.8; margin: 16px 0 12px; }
+.step-body ul, .step-body ol { color: var(--text-muted); font-size: 14px; line-height: 1.9; padding-left: 20px; margin: 8px 0; }
+.step-body li { margin-bottom: 4px; }
+.step-body strong { color: var(--text); }
+.step-body code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  background: var(--surface2); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--border); color: var(--accent);
+}
+
+/* CODE BLOCK — ALWAYS LIGHT BACKGROUND, NEVER DARK */
+/* background: #f6f7fb is required — do not change to dark colors */
+.code-block {
+  position: relative; background: #f6f7fb; border: 1px solid var(--border);
+  border-radius: 10px; margin: 14px 0; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: #eceef7;
+}
+.code-lang { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+.copy-btn {
+  background: none; border: 1px solid var(--border-bright); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--accent); }
+.copy-btn.copied { color: var(--accent2); border-color: var(--accent2); }
+.code-block pre {
+  padding: 16px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--text-muted);
+}
+.code-block pre .cmd  { color: #2563eb; }
+.code-block pre .str  { color: #16a34a; }
+.code-block pre .cmt  { color: #9ca3af; font-style: italic; }
+.code-block pre .key  { color: #7c3aed; }
+.code-block pre .num  { color: #d97706; }
+.code-block pre .flag { color: #b45309; }
+
+/* TERMINAL — ALWAYS WHITE BACKGROUND, NEVER DARK */
+/* background: #ffffff is required — do not change to dark colors */
+.terminal {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin: 16px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #f0f1f6; border-bottom: 1px solid var(--border);
+}
+.terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+.terminal-dot:nth-child(1) { background: #ff5f57; }
+.terminal-dot:nth-child(2) { background: #febc2e; }
+.terminal-dot:nth-child(3) { background: #28c840; }
+.terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+.terminal-body { padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
+.terminal-body .prompt  { color: #0d7a50; }
+.terminal-body .out     { color: #44495f; }
+.terminal-body .success { color: #0d7a50; }
+.terminal-body .info    { color: #2563eb; }
+.terminal-body .warn    { color: #c97a0a; }
+
+/* TIP BOXES */
+.tip, .warning, .info-box {
+  border-radius: 10px; padding: 14px 18px; margin: 14px 0;
+  font-size: 14px; line-height: 1.7; display: flex; gap: 12px;
+}
+.tip      { background: rgba(13,154,116,0.06);  border: 1px solid rgba(13,154,116,0.18); color: #0a7a5c; }
+.warning  { background: rgba(201,122,10,0.06);  border: 1px solid rgba(201,122,10,0.18); color: #9a5e08; }
+.info-box { background: rgba(79,70,229,0.06);   border: 1px solid rgba(79,70,229,0.18);  color: #3730a3; }
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* CHECKLIST */
+.checklist { list-style: none; padding: 0; margin: 12px 0; }
+.checklist li {
+  display: flex; align-items: flex-start; gap: 10px; padding: 6px 0;
+  font-size: 14px; color: var(--text-muted); border-bottom: 1px solid var(--border);
+}
+.checklist li:last-child { border-bottom: none; }
+.check-box {
+  width: 18px; height: 18px; border: 1.5px solid var(--border-bright);
+  border-radius: 5px; flex-shrink: 0; margin-top: 1px; cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.check-box:hover { border-color: var(--accent); }
+.check-box.checked { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* DIAGRAM */
+.diagram {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin: 16px 0; text-align: center;
+}
+.diagram-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.diagram-node {
+  background: #fff; border: 1px solid var(--border-bright); border-radius: 10px;
+  padding: 12px 20px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.diagram-node.accent { border-color: var(--accent);      color: var(--accent);      background: rgba(79,70,229,0.05); }
+.diagram-node.green  { border-color: var(--beginner);    color: var(--beginner);    background: rgba(13,154,116,0.05); }
+.diagram-node.orange { border-color: var(--advanced);    color: var(--advanced);    background: rgba(201,122,10,0.05); }
+.diagram-arrow { color: var(--text-dim); font-size: 20px; }
+
+/* FILE TREE (dark) */
+.file-tree {
+  background: #0f1117; border: 1px solid #1e2230; border-radius: 10px;
+  padding: 16px; margin: 14px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 2;
+}
+.file-tree .folder    { color: #61afef; }
+.file-tree .file      { color: #abb2bf; }
+.file-tree .important { color: #e5c07b; font-weight: 700; }
+.file-tree .indent1   { padding-left: 20px; }
+.file-tree .indent2   { padding-left: 40px; }
+.file-tree .indent3   { padding-left: 60px; }
+
+/* SKILL SHOWCASE (dark, for config/YAML blocks) */
+.skill-showcase { background: #0f1117; border: 1px solid #1e2230; border-radius: 12px; overflow: hidden; margin: 14px 0; }
+.skill-showcase-header {
+  padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid #1e2230;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #555;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.skill-showcase-body { padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8; color: #abb2bf; }
+.skill-showcase-body .sk-key     { color: #c678dd; }
+.skill-showcase-body .sk-val     { color: #98c379; }
+.skill-showcase-body .sk-comment { color: #5c6370; }
+.skill-showcase-body .sk-head    { color: #e5c07b; font-weight: bold; }
+.skill-showcase-body .sk-code    { color: #61afef; }
+
+/* PHASE DIVIDER */
+.phase-divider { display: flex; align-items: center; gap: 16px; margin: 48px 0 32px; }
+.phase-divider-line { flex: 1; height: 1px; background: var(--border); }
+.phase-label {
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; padding: 6px 16px;
+  border-radius: 100px; border: 1px solid; white-space: nowrap;
+}
+.phase-label.b { color: var(--beginner);    border-color: rgba(13,154,116,0.25); background: rgba(13,154,116,0.05); }
+.phase-label.i { color: var(--intermediate); border-color: rgba(79,70,229,0.25);  background: rgba(79,70,229,0.05); }
+.phase-label.a { color: var(--advanced);    border-color: rgba(201,122,10,0.25); background: rgba(201,122,10,0.05); }
+.phase-label.n { color: var(--text-dim);    border-color: var(--border);         background: var(--surface); }
+
+/* COMMAND CARD */
+.command-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; margin: 10px 0;
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s;
+}
+.command-card:hover { border-color: var(--border-bright); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.command-icon {
+  width: 36px; height: 36px; border-radius: 8px; background: rgba(79,70,229,0.08);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.command-name { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); margin-bottom: 2px; }
+.command-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.copy-cmd-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 5px 10px;
+  border-radius: 5px; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.copy-cmd-btn:hover { color: var(--text); border-color: var(--border-bright); background: var(--surface2); }
+
+/* TABLE */
+.data-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+.data-table th {
+  text-align: left; padding: 10px 14px; background: var(--surface2);
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+  color: var(--text-muted); border-bottom: 2px solid var(--border); letter-spacing: 0.3px;
+}
+.data-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-muted); line-height: 1.6;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); font-weight: 500; }
+.data-table tr:hover td { background: var(--surface); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px 0; }
+  .content { padding: 24px 20px 80px; }
+  .hero { padding: 48px 20px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar-container">
+  <div class="progress-bar-fill" id="progressBar"></div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Instructor Reference · 60 Min</div>
+  <h1>Demo Script —<br>Containers on AWS</h1>
+  <p class="hero-sub">Step-by-step script with exact commands, timing cues, and talking points.</p>
+</div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+
+    <div class="sidebar-section-title">Preparation</div>
+    <a class="sidebar-link level-b active" onclick="scrollTo('s1')">
+      <span class="dot"></span>Pre-Demo Checklist
+    </a>
+
+    <div class="sidebar-section-title">Slides (0–22 min)</div>
+    <a class="sidebar-link level-b" onclick="scrollTo('s2')">
+      <span class="dot"></span>Introduction
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s3')">
+      <span class="dot"></span>What Are Containers?
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s4')">
+      <span class="dot"></span>Docker 101
+    </a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s5')">
+      <span class="dot"></span>AWS Services Overview
+    </a>
+
+    <div class="sidebar-section-title">Live Demo (22–52 min)</div>
+    <a class="sidebar-link level-i" onclick="scrollTo('s6')">
+      <span class="dot"></span>Build + Push to ECR
+    </a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s7')">
+      <span class="dot"></span>Deploy to ECS Fargate
+    </a>
+
+    <div class="sidebar-section-title">Wrap-Up (52–60 min)</div>
+    <a class="sidebar-link level-a" onclick="scrollTo('s8')">
+      <span class="dot"></span>EKS vs App Runner
+    </a>
+    <a class="sidebar-link level-a" onclick="scrollTo('s9')">
+      <span class="dot"></span>Recap + Q&amp;A
+    </a>
+    <a class="sidebar-link level-a" onclick="scrollTo('s10')">
+      <span class="dot"></span>Cleanup
+    </a>
+
+  </nav>
+
+  <main class="content">
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 1 — Pre-Demo Checklist
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s1" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">01</div>
+        <div class="section-title-wrap">
+          <h2>Pre-Demo Checklist</h2>
+          <span class="level-tag b">Before the Session</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Verify Docker Desktop &amp; AWS CLI</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Confirm Docker Desktop is running and you can issue commands, then verify your AWS credentials are active.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>Docker Desktop running</strong> — verify with <code>docker ps</code> (should return an empty table, not an error)</div></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>AWS CLI configured</strong> — verify with <code>aws sts get-caller-identity</code></div></li>
+            </ul>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — ~/containers</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> docker ps</div>
+                <div class="out">CONTAINER ID   IMAGE   COMMAND   CREATED   STATUS   PORTS   NAMES</div>
+                <div><span class="prompt">$</span> aws sts get-caller-identity</div>
+                <div class="success">{ "UserId": "...", "Account": "123456789012", "Arn": "arn:aws:iam::123456789012:user/..." }</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Pre-Create ECR Repository</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run this command before the session to create the ECR repository. Doing it live during the demo wastes time and can fail if IAM permissions are misconfigured.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">aws</span> ecr create-repository \
+  <span class="flag">--repository-name</span> <span class="str">containers-demo</span> \
+  <span class="flag">--region</span> <span class="str">us-east-1</span> \
+  <span class="flag">--image-scanning-configuration</span> scanOnPush=<span class="key">true</span></pre>
+            </div>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>ECR repo <code>containers-demo</code> exists in us-east-1</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Pre-load Browser Tabs &amp; Terminal</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Set up your environment before the audience arrives. Fumbling between tabs mid-demo kills momentum.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Slide deck open in browser: <code>containers/presentation/slides.html</code></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>AWS Console tab — ECR (<a href="https://console.aws.amazon.com/ecr" target="_blank" style="color:var(--accent)">console.aws.amazon.com/ecr</a>)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>AWS Console tab — ECS (<a href="https://console.aws.amazon.com/ecs" target="_blank" style="color:var(--accent)">console.aws.amazon.com/ecs</a>)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Terminal open, working directory set to <code>containers/</code></li>
+            </ul>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> cd ~/path/to/Work_Presentation/containers</div>
+                <div><span class="prompt">$</span> ls</div>
+                <div class="out">app/  diagrams/  Dockerfile  presentation/  setup-guide/</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Dry Run — Docker Build + Run Test</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Do a full dry run at least once before the session. This ensures caches are warm, images are downloaded, and you remember every step.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><code>docker build -t containers-demo .</code> completes without errors</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><code>docker run -d -p 8080:80 containers-demo</code> serves the app at <code>localhost:8080</code></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>ECR push succeeds (token valid)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>All checklist items above confirmed</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 2 — Introduction (0–8 min)
+    ════════════════════════════════════════════ -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label b">Slides — 0 to 22 min</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <div class="section" id="s2" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">02</div>
+        <div class="section-title-wrap">
+          <h2>Introduction</h2>
+          <span class="level-tag b">0 – 8 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Title Slide — Open the Room</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "Today we're going hands-on with containers on AWS. By the end of this session you'll have built a Docker image, pushed it to Amazon ECR, and deployed it to Fargate — all from scratch. No prior container experience needed."</p>
+            <div class="tip"><div class="tip-icon">✅</div><div>Make eye contact, let people settle. Wait 15 seconds before advancing.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Agenda Slide — Set Expectations</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Walk through the agenda. Call out EKS and App Runner explicitly.</p>
+            <p><strong>Talking point:</strong> "We'll cover containers conceptually, then Docker basics, then the three main AWS services. EKS and App Runner we'll cover briefly in the slides — today's live demo focuses on ECR and ECS Fargate since those are the fastest path to production for most teams."</p>
+            <div class="info-box"><div class="tip-icon">💡</div><div><strong>Slides-only note:</strong> EKS and App Runner are covered in the AWS Services Overview section (slides only). Do not attempt to demo them live — there is not enough time.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Today's Goal Slide</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "By the time we're done, you'll understand the full containers-on-AWS journey: write a Dockerfile, build an image locally, push to a private registry in ECR, then deploy it to a serverless container runtime with Fargate. No servers to manage, no SSH, no patching."</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node green">Dockerfile</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node">docker build</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node accent">ECR</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node orange">ECS Fargate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 3 — What Are Containers? (8–15 min)
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s3" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">03</div>
+        <div class="section-title-wrap">
+          <h2>What Are Containers?</h2>
+          <span class="level-tag b">8 – 15 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">The Problem — "It Works on My Machine"</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "Who here has heard 'it works on my machine'? Raise your hand. This is the core problem containers solve. Different OS versions, different library versions, different runtime environments — containers package everything together so the app runs identically everywhere."</p>
+            <div class="info-box"><div class="tip-icon">💡</div><div>Pause for audience show of hands. It warms up the room and makes the problem concrete.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">VMs vs Containers</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "A VM virtualizes the entire hardware stack — you get a full OS guest on top of a hypervisor. A container shares the host kernel and just packages your app and its dependencies. That's why containers start in seconds and are measured in megabytes, while VMs take minutes and gigabytes."</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node" style="text-align:center; padding:16px 24px;">
+                  <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">VIRTUAL MACHINE</div>
+                  <div style="font-size:12px; color:var(--text-muted);">App + Guest OS + Hypervisor</div>
+                  <div style="font-size:11px; color:var(--advanced); margin-top:4px;">GBs — minutes to start</div>
+                </div>
+                <div class="diagram-arrow">vs</div>
+                <div class="diagram-node green" style="text-align:center; padding:16px 24px;">
+                  <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">CONTAINER</div>
+                  <div style="font-size:12px; color:var(--text-muted);">App + Dependencies (shared kernel)</div>
+                  <div style="font-size:11px; color:var(--beginner); margin-top:4px;">MBs — seconds to start</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">The Shipping Container Analogy</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "Think about shipping containers — before standardized steel containers, each cargo ship needed custom handling for every type of cargo. After standardization, any container fits any ship, any truck, any crane. Docker containers did the same thing for software: one standard format that runs on any machine, any cloud, any CI system."</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Image vs Container</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "An <strong>image</strong> is the blueprint — a read-only snapshot of your app and everything it needs. A <strong>container</strong> is a running instance of that image. One image can run as many containers as you need. Think of an image like a class definition in code, and a container like an object instance."</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node accent">Image (blueprint)</div>
+                <div class="diagram-arrow">→ run</div>
+                <div class="diagram-node green">Container 1</div>
+                <div class="diagram-arrow">+</div>
+                <div class="diagram-node green">Container 2</div>
+                <div class="diagram-arrow">+</div>
+                <div class="diagram-node green">Container N</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">5</div>
+            <div class="step-title">Why Containers on AWS?</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "AWS gives you a managed stack for every layer of the container journey: ECR for storing images, ECS and Fargate for running them without managing servers, and EKS if you need the full Kubernetes control plane. You can go from Dockerfile to production without touching a single EC2 instance."</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 4 — Docker 101 (15–22 min)
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s4" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">04</div>
+        <div class="section-title-wrap">
+          <h2>Docker 101</h2>
+          <span class="level-tag b">15 – 22 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Walk Through the Dockerfile</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Show the Dockerfile slide, then switch to the terminal and run <code>cat Dockerfile</code> so the audience sees the real file. Three lines is the point — it's intentionally simple.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">dockerfile</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="key">FROM</span> nginx:alpine
+<span class="key">COPY</span> app/index.html /usr/share/nginx/html/index.html
+<span class="key">EXPOSE</span> <span class="num">80</span></pre>
+            </div>
+            <p><strong>Talking point line by line:</strong></p>
+            <ul>
+              <li><code>FROM nginx:alpine</code> — start from the official nginx image on Alpine Linux. Tiny base, pre-configured web server included.</li>
+              <li><code>COPY app/index.html ...</code> — replace nginx's default page with our app. That's our entire "deployment."</li>
+              <li><code>EXPOSE 80</code> — documentation that the container listens on port 80. Doesn't actually open a port — that's done at runtime.</li>
+            </ul>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — ~/containers</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> cat Dockerfile</div>
+                <div class="out">FROM nginx:alpine</div>
+                <div class="out">COPY app/index.html /usr/share/nginx/html/index.html</div>
+                <div class="out">EXPOSE 80</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Core Docker Commands Explained</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Briefly explain the four commands before running them live in Section 6. Set context so the audience knows what to look for.</p>
+            <ul>
+              <li><strong>docker build</strong> — reads the Dockerfile, downloads layers, produces an image</li>
+              <li><strong>docker images</strong> — lists images on your local machine</li>
+              <li><strong>docker run</strong> — creates and starts a container from an image</li>
+              <li><strong>docker push</strong> — uploads the image to a registry (ECR)</li>
+            </ul>
+            <div class="tip"><div class="tip-icon">✅</div><div>Remind the audience: we'll run all of these live in a few minutes. This is just the mental model.</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 5 — AWS Services Overview (22–35 min)
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s5" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">05</div>
+        <div class="section-title-wrap">
+          <h2>AWS Services Overview</h2>
+          <span class="level-tag b">22 – 35 min (slides)</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">ECR — Elastic Container Registry</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "ECR is AWS's fully managed Docker registry. Think of it as a private Docker Hub, but inside your AWS account. Images are encrypted at rest, integrated with IAM, and automatically scanned for CVEs on push. No quota limits, no rate limiting on pulls from your own account."</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">ECS — Elastic Container Service</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "ECS is AWS's container orchestrator. You define a <strong>Task Definition</strong> — what image, how much CPU and memory, what ports — then ECS handles scheduling, health checks, and restarts. With the Fargate launch type, AWS manages the underlying compute entirely. You never see an EC2 instance."</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">EKS — Elastic Kubernetes Service</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "EKS runs a managed Kubernetes control plane. AWS handles etcd, the API server, upgrades, and HA. You own the worker nodes — or use EKS Auto Mode, which is the 2025 default that makes Kubernetes nearly ops-free. Use EKS when you need the full Kubernetes ecosystem, multi-cloud portability, or already have Kubernetes expertise on your team."</p>
+            <div class="info-box"><div class="tip-icon">💡</div><div><strong>EKS Auto Mode (2025):</strong> Makes Kubernetes operations-free by handling node provisioning, scaling, and lifecycle automatically. Mention this as the modern starting point for new EKS workloads.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">App Runner — Fully Managed Container Hosting</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "App Runner is the simplest option: point it at an ECR image or a GitHub repo, and it handles everything — build, deploy, scaling, load balancing, TLS. Zero infrastructure decisions. Perfect for internal tools, APIs, and side projects where you want zero ops overhead."</p>
+            <div class="info-box"><div class="tip-icon">💡</div><div><strong>2025 App Runner updates:</strong> AWS shipped major improvements including VPC support (connect to RDS, ElastiCache), WAF integration for security, and custom domain management. App Runner is now viable for production workloads that previously required ECS.</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 6 — LIVE: Build + Push to ECR
+    ════════════════════════════════════════════ -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label i">Live Demo — 22 to 52 min</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <div class="section" id="s6" data-level="intermediate">
+      <div class="section-header">
+        <div class="step-number">06</div>
+        <div class="section-title-wrap">
+          <h2>LIVE: Build + Push to ECR</h2>
+          <span class="level-tag i">22 – 35 min · Live Demo</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">A</div>
+            <div class="step-title">Step 6a — Build the Image Locally</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run each command in sequence. Narrate as you type. Pause after <code>docker images</code> so the audience can see the image size.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Build the image — run from containers/ directory</span>
+<span class="cmd">docker</span> build -t containers-demo .
+
+<span class="cmt"># Confirm the image was created</span>
+<span class="cmd">docker</span> images | <span class="cmd">grep</span> containers-demo
+
+<span class="cmt"># Run it locally and test</span>
+<span class="cmd">docker</span> run -d -p 8080:80 --name demo-local containers-demo
+<span class="cmt"># Open http://localhost:8080 in browser</span>
+
+<span class="cmt"># Stop and remove the local container</span>
+<span class="cmd">docker</span> stop demo-local &amp;&amp; <span class="cmd">docker</span> rm demo-local</pre>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — ~/containers</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> docker build -t containers-demo .</div>
+                <div class="out">[+] Building 4.2s (7/7) FINISHED</div>
+                <div><span class="prompt">$</span> docker images | grep containers-demo</div>
+                <div class="out">containers-demo   latest   a1b2c3d4e5f6   5 seconds ago   <span class="success">42MB</span></div>
+                <div><span class="prompt">$</span> docker run -d -p 8080:80 --name demo-local containers-demo</div>
+                <div class="success">7f3e9c2a1b4d...</div>
+              </div>
+            </div>
+            <p><strong>Talking point:</strong> "About 40MB — tiny compared to a full EC2 AMI which is typically 8–25GB. That's the power of Alpine-based images. Open <code>localhost:8080</code> — you're looking at our app running inside a container on your laptop."</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">B</div>
+            <div class="step-title">Step 6b — Authenticate + Push to ECR</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Walk through each command block. Explain what each variable resolves to as you set it.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash — set variables</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Grab account ID and set region</span>
+<span class="key">AWS_ACCOUNT_ID</span>=$(<span class="cmd">aws</span> sts get-caller-identity <span class="flag">--query</span> Account <span class="flag">--output</span> text)
+<span class="key">REGION</span>=us-east-1
+<span class="cmd">echo</span> <span class="str">"Account: $AWS_ACCOUNT_ID"</span></pre>
+            </div>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash — authenticate to ECR</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmd">aws</span> ecr get-login-password <span class="flag">--region</span> $REGION \
+  | <span class="cmd">docker</span> login <span class="flag">--username</span> AWS <span class="flag">--password-stdin</span> \
+    $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash — tag + push</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Tag the image with the full ECR URI</span>
+<span class="cmd">docker</span> tag containers-demo:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest
+
+<span class="cmt"># Push to ECR</span>
+<span class="cmd">docker</span> push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest</pre>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — ECR push output</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> aws ecr get-login-password --region us-east-1 | docker login ...</div>
+                <div class="success">Login Succeeded</div>
+                <div><span class="prompt">$</span> docker push ...amazonaws.com/containers-demo:latest</div>
+                <div class="out">latest: digest: sha256:a1b2c3... size: 942</div>
+                <div class="success">Pushed successfully</div>
+              </div>
+            </div>
+            <div class="tip"><div class="tip-icon">✅</div><div><strong>ECR auth tip:</strong> The token returned by <code>get-login-password</code> is valid for <strong>12 hours</strong>. If you get auth errors, simply re-run the login command — do not try to debug Docker credentials further.</div></div>
+            <p>After push: switch to the ECR console tab and show the image in the repository. Click into it to show the digest, size, and scan results.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 7 — LIVE: Deploy to ECS Fargate
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s7" data-level="intermediate">
+      <div class="section-header">
+        <div class="step-number">07</div>
+        <div class="section-title-wrap">
+          <h2>LIVE: Deploy to ECS Fargate</h2>
+          <span class="level-tag i">35 – 52 min · Live Demo</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">A</div>
+            <div class="step-title">Step 7a — Create the ECS Cluster</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Switch to the ECS console. Click <strong>Create Cluster</strong>. Fill in the fields below.</p>
+            <table class="data-table">
+              <thead><tr><th>Field</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Cluster name</td><td>containers-demo-cluster</td></tr>
+                <tr><td>Infrastructure</td><td>AWS Fargate (serverless)</td></tr>
+                <tr><td>Everything else</td><td>Leave as default</td></tr>
+              </tbody>
+            </table>
+            <p>Click <strong>Create</strong>. Then click into the cluster detail page.</p>
+            <div class="tip"><div class="tip-icon">✅</div><div>Wait for the cluster to show <strong>Active</strong> status. This takes approximately 30 seconds. Use the time to explain what's happening: "AWS is provisioning the Fargate control plane for our cluster — we won't see any EC2 instances because Fargate abstracts them away entirely."</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">B</div>
+            <div class="step-title">Step 7b — Create the Task Definition</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>In the ECS console sidebar, click <strong>Task Definitions</strong> → <strong>Create new task definition</strong>.</p>
+            <table class="data-table">
+              <thead><tr><th>Field</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Task family</td><td>containers-demo-task</td></tr>
+                <tr><td>Launch type</td><td>AWS Fargate</td></tr>
+                <tr><td>CPU</td><td>0.5 vCPU</td></tr>
+                <tr><td>Memory</td><td>1 GB</td></tr>
+                <tr><td>Task execution role</td><td>ecsTaskExecutionRole (create if prompted)</td></tr>
+              </tbody>
+            </table>
+            <p>Under <strong>Container definitions</strong>, click <strong>Add container</strong>:</p>
+            <table class="data-table">
+              <thead><tr><th>Field</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Container name</td><td>web</td></tr>
+                <tr><td>Image URI</td><td>&lt;ACCOUNT_ID&gt;.dkr.ecr.us-east-1.amazonaws.com/containers-demo:latest</td></tr>
+                <tr><td>Port mappings</td><td>80 (TCP)</td></tr>
+                <tr><td>Everything else</td><td>Leave as default</td></tr>
+              </tbody>
+            </table>
+            <div class="info-box"><div class="tip-icon">💡</div><div><strong>Fargate minimum config:</strong> The minimum CPU on Linux Fargate is <strong>0.25 vCPU</strong>. We use 0.5 vCPU for comfortable demo speed and to avoid any throttling during the presentation. Cost at 0.5 vCPU / 1 GB is approximately <strong>$0.024/hour</strong> while running.</div></div>
+            <div class="tip"><div class="tip-icon">✅</div><div>Copy the ECR image URI from the ECR console tab you already have open — don't type it from memory.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">C</div>
+            <div class="step-title">Step 7c — Create the Service + Access the App</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Back in your cluster, click <strong>Services</strong> → <strong>Create</strong>. Fill in the fields:</p>
+            <table class="data-table">
+              <thead><tr><th>Field</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Launch type</td><td>Fargate</td></tr>
+                <tr><td>Task definition</td><td>containers-demo-task (latest)</td></tr>
+                <tr><td>Service name</td><td>containers-demo-svc</td></tr>
+                <tr><td>Desired tasks</td><td>1</td></tr>
+                <tr><td>VPC</td><td>Default VPC</td></tr>
+                <tr><td>Subnets</td><td>Select all public subnets</td></tr>
+                <tr><td>Security group</td><td>Create new — allow TCP 80 inbound from anywhere (0.0.0.0/0)</td></tr>
+                <tr><td>Public IP</td><td>Enabled (TURNED ON)</td></tr>
+              </tbody>
+            </table>
+            <p>Click <strong>Create</strong> and watch the task status progression:</p>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">ECS Console — Task Status (refresh every 30s)</span>
+              </div>
+              <div class="terminal-body">
+                <div class="warn">PROVISIONING  →  pulling image from ECR...</div>
+                <div class="info">PENDING       →  starting nginx inside the container...</div>
+                <div class="success">RUNNING       →  task is healthy and accepting traffic</div>
+              </div>
+            </div>
+            <p><strong>Talking point while waiting:</strong> "No EC2 to manage. No Apache to install. No SSH keys. We pushed an image to ECR, pointed ECS at it, and Fargate handled all the rest — pulling the image, placing it on infrastructure, starting the container, and health-checking it."</p>
+            <p>Once the task shows <strong>RUNNING</strong>: click the task → <strong>Configuration</strong> tab → copy the <strong>Public IP</strong>. Open <code>http://&lt;public-ip&gt;</code> in the browser.</p>
+            <div class="tip"><div class="tip-icon">✅</div><div>Show the browser and the ECS console side by side. Let the moment land — the audience just watched a container go from source to production in under 30 minutes.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num i">R</div>
+            <div class="step-title">Recovery Tips — When Things Go Wrong</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Keep this table visible during the live demo. Stay calm — recovery is part of the demo.</p>
+            <table class="data-table">
+              <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>ECR auth fails</td>
+                  <td>Re-run <code>get-login-password</code> command. Verify <code>$REGION</code> matches the repo region in ECR.</td>
+                </tr>
+                <tr>
+                  <td>ECS task stuck PENDING</td>
+                  <td>Check the security group allows TCP 80 inbound. Verify the task execution role is attached to the task definition.</td>
+                </tr>
+                <tr>
+                  <td>Task keeps stopping immediately</td>
+                  <td>Click the task → <strong>Logs</strong> tab to read the CloudWatch error output.</td>
+                </tr>
+                <tr>
+                  <td>Running out of time</td>
+                  <td>Switch to the ECR console, show the pushed image. Explain: "What ECS would do next is pull this image URI and run it on Fargate. The task definition and service creation are 2-minute console steps."</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 8 — EKS vs App Runner (52–57 min)
+    ════════════════════════════════════════════ -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label a">Wrap-Up — 52 to 60 min</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <div class="section" id="s8" data-level="advanced">
+      <div class="section-header">
+        <div class="step-number">08</div>
+        <div class="section-title-wrap">
+          <h2>EKS vs App Runner</h2>
+          <span class="level-tag a">52 – 57 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">1</div>
+            <div class="step-title">When to Choose EKS</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "Choose EKS when you need the Kubernetes ecosystem — Helm charts, custom controllers, service mesh, or multi-cloud portability. EKS Auto Mode (launched in 2025) handles node provisioning and lifecycle automatically, making it the right starting point for new EKS workloads. It's no longer the 'hard' choice."</p>
+            <ul>
+              <li>Multi-cloud portability (Kubernetes runs anywhere)</li>
+              <li>Team already has Kubernetes expertise</li>
+              <li>Need custom CRDs, operators, or advanced networking</li>
+              <li>Large-scale microservices (&gt;20 services)</li>
+            </ul>
+            <div class="info-box"><div class="tip-icon">💡</div><div><strong>EKS Auto Mode (2025):</strong> Eliminates the need to manage node groups, instance types, and AMI upgrades. Mention this as the modern EKS starting point — it removes the main historical objection to EKS (operational complexity).</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">2</div>
+            <div class="step-title">When to Choose App Runner</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "Choose App Runner when you want zero infrastructure decisions. Point it at an ECR image, set a port, and you're live — with auto-scaling, load balancing, and TLS included. The 2025 updates added VPC support (so you can connect to RDS and ElastiCache), WAF integration, and custom domain management. App Runner is now viable for real production APIs, not just side projects."</p>
+            <ul>
+              <li>Web services and REST APIs</li>
+              <li>Internal tools and dashboards</li>
+              <li>Teams that want no ops overhead</li>
+              <li>Stateless workloads with predictable traffic</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">3</div>
+            <div class="step-title">Decision Framework</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p><strong>Talking point:</strong> "Here's how I think about it: start with App Runner if you want the least friction. Move to ECS Fargate when you need more control — VPC routing, service discovery, load balancer integration. Move to EKS when you need the Kubernetes ecosystem or have 20+ microservices. There's no wrong answer — pick the simplest one that meets your requirements."</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node green">App Runner<br><span style="font-size:10px; font-weight:400">Zero ops</span></div>
+                <div class="diagram-arrow">→ more control</div>
+                <div class="diagram-node accent">ECS Fargate<br><span style="font-size:10px; font-weight:400">Managed compute</span></div>
+                <div class="diagram-arrow">→ full ecosystem</div>
+                <div class="diagram-node orange">EKS<br><span style="font-size:10px; font-weight:400">Full Kubernetes</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 9 — Recap + Q&A (57–60 min)
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s9" data-level="advanced">
+      <div class="section-header">
+        <div class="step-number">09</div>
+        <div class="section-title-wrap">
+          <h2>Recap + Q&amp;A</h2>
+          <span class="level-tag a">57 – 60 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">1</div>
+            <div class="step-title">5 Key Takeaways</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Read each takeaway aloud, pausing briefly after each one to let it land.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>Containers are lightweight VMs</strong> — same isolation, but MBs not GBs, and seconds not minutes to start.</div></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>A Dockerfile is all you need</strong> — three lines can get you a production-ready container image.</div></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>ECR is your private registry</strong> — integrated with IAM, encrypted, and scanned automatically.</div></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>ECS Fargate = no servers</strong> — define what you want to run, not where to run it. AWS handles the rest.</div></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><div><strong>Right service for the right job</strong> — App Runner for zero ops, ECS for control, EKS for Kubernetes scale.</div></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">2</div>
+            <div class="step-title">Q&amp;A — Open Floor</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Open the floor for questions. Common questions and quick answers:</p>
+            <ul>
+              <li><strong>"How much does this cost?"</strong> — The Fargate task we just ran costs ~$0.024/hour at 0.5 vCPU / 1 GB. ECR storage is $0.10/GB/month. Clean up after the demo and it's effectively free.</li>
+              <li><strong>"Can I run multiple containers?"</strong> — Yes. Add multiple container definitions to the Task Definition. Use ECS Service Connect or a load balancer for inter-service communication.</li>
+              <li><strong>"How do I update the app?"</strong> — Build a new image with a new tag, push to ECR, update the task definition to point to the new tag, then trigger a new deployment on the service.</li>
+              <li><strong>"What about databases?"</strong> — Containers are stateless by design. Use RDS, Aurora, DynamoDB, or ElastiCache for persistent state. Mount EFS volumes if you need shared file storage.</li>
+            </ul>
+            <div class="tip"><div class="tip-icon">✅</div><div>If a question goes deep, offer to follow up after the session. Don't let one question consume the entire Q&amp;A window.</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECTION 10 — Cleanup
+    ════════════════════════════════════════════ -->
+    <div class="section" id="s10" data-level="advanced">
+      <div class="section-header">
+        <div class="step-number">10</div>
+        <div class="section-title-wrap">
+          <h2>Cleanup</h2>
+          <span class="level-tag a">After the Session</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">1</div>
+            <div class="step-title">Delete ECR Images</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Run this command to delete the pushed image from ECR. The repository itself will remain (empty), which is free.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Delete ECR image</span>
+<span class="cmd">aws</span> ecr batch-delete-image \
+  <span class="flag">--repository-name</span> containers-demo \
+  <span class="flag">--region</span> us-east-1 \
+  <span class="flag">--image-ids</span> imageTag=latest</pre>
+            </div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div><strong>Always clean up after the demo.</strong> A 0.5 vCPU / 1 GB Fargate task costs approximately <strong>$0.024/hour</strong> while running. Left running overnight, that's ~$0.58. Clean up the ECS service and cluster from the console after the session.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">2</div>
+            <div class="step-title">Delete ECS Service + Cluster</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECS services and clusters must be deleted from the console in this order:</p>
+            <ol>
+              <li>In ECS console → your cluster → <strong>Services</strong> tab → select <code>containers-demo-svc</code> → <strong>Update</strong> → set <strong>Desired tasks to 0</strong> → Save</li>
+              <li>Wait for running task count to reach 0 (30–60 seconds)</li>
+              <li>Select the service → <strong>Delete</strong> → confirm</li>
+              <li>Click <strong>Clusters</strong> → select <code>containers-demo-cluster</code> → <strong>Delete cluster</strong> → confirm</li>
+            </ol>
+            <div class="tip"><div class="tip-icon">✅</div><div>The Task Definition is free to keep — it has no ongoing cost. You can delete it from <strong>Task Definitions</strong> → select it → <strong>Deregister</strong> if you want a clean account.</div></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num a">3</div>
+            <div class="step-title">Clean Up Local Docker Images</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Optional — remove local images to free up disk space.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Remove local containers-demo image</span>
+<span class="cmd">docker</span> rmi containers-demo:latest
+
+<span class="cmt"># Remove the tagged ECR copy too</span>
+<span class="cmd">docker</span> rmi $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest
+
+<span class="cmt"># Optional: prune dangling images</span>
+<span class="cmd">docker</span> image prune -f</pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function toggleStep(header) {
+  const step = header.parentElement;
+  step.classList.toggle('open');
+}
+
+function filterLevel(level) {
+  document.querySelectorAll('.level-pill').forEach(p => p.classList.remove('active'));
+  if (level === 'all') {
+    document.querySelector('.level-pill.all-btn').classList.add('active');
+  } else {
+    document.querySelector(`.level-pill.${level}`).classList.add('active');
+  }
+  document.querySelectorAll('.section').forEach(s => {
+    if (level === 'all') {
+      s.classList.remove('hidden');
+    } else {
+      s.classList.toggle('hidden', s.dataset.level !== level);
+    }
+  });
+  document.querySelectorAll('.phase-divider').forEach(d => {
+    d.style.display = level === 'all' ? 'flex' : 'none';
+  });
+}
+
+function copyCode(btn, text) {
+  if (!text) {
+    const pre = btn.closest('.code-block, .skill-showcase')?.querySelector('pre, .skill-showcase-body');
+    text = pre ? pre.innerText : '';
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+window.addEventListener('scroll', () => {
+  const fill = document.getElementById('progressBar');
+  if (fill) {
+    const pct = Math.min(100, (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    fill.style.width = pct + '%';
+  }
+});
+
+const sections = document.querySelectorAll('.section[id]');
+const sidebarLinks = document.querySelectorAll('.sidebar-link');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      sidebarLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('onclick')?.includes(id));
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+
+document.querySelectorAll('.steps .step:first-child').forEach(step => {
+  step.classList.add('open');
+});
+</script>
+</body>
+</html>

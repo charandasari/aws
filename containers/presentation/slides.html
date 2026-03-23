@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Containers on AWS — Charan Dasari</title>
+<style>
+/* ── Variables ── */
+:root {
+  --bg:     #f6f8fa;
+  --surface:#ffffff;
+  --surface2:#f0f2f5;
+  --border: #d0d7de;
+  --border2:#e1e4e8;
+  --text:   #1c2128;
+  --muted:  #57606a;
+  --muted2: #8c959f;
+  --green:  #1a7f37;
+  --gl:     #1a7f37;
+  --blue:   #0550ae;
+  --bl:     #0550ae;
+  --orange: #9a6700;
+  --ol:     #9a6700;
+  --purple: #6639ba;
+  --pl:     #6639ba;
+  --red:    #cf222e;
+  --rl:     #cf222e;
+  --teal:   #0e7490;
+  --tl:     #0e7490;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+
+/* ── Progress bar ── */
+#progress{position:fixed;top:0;left:0;height:3px;background:var(--gl);
+  transition:width .35s ease;z-index:300;}
+
+/* ── Slide label ── */
+#slide-label{position:fixed;top:1rem;right:1.5rem;font-size:.7rem;color:var(--muted2);
+  letter-spacing:.08em;text-transform:uppercase;z-index:200;}
+
+/* ── Section tag (top left) ── */
+#section-tag{position:fixed;top:1rem;left:1.5rem;font-size:.7rem;color:var(--muted2);
+  letter-spacing:.08em;text-transform:uppercase;z-index:200;}
+
+/* ── Nav ── */
+.nav{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:.75rem;z-index:200;
+  background:rgba(255,255,255,.95);border:1px solid var(--border);
+  border-radius:40px;padding:.4rem 1rem;backdrop-filter:blur(8px);
+  box-shadow:0 2px 12px rgba(0,0,0,.1);}
+.nav button{background:none;border:none;color:var(--text);font-size:1.1rem;
+  cursor:pointer;padding:4px 10px;border-radius:6px;transition:background .15s;}
+.nav button:hover{background:var(--border2);}
+.nav .ctr{font-size:.8rem;color:var(--muted);min-width:52px;text-align:center;}
+
+/* ── Deck / Slide ── */
+.deck{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:3rem 5rem;text-align:center;
+  overflow:hidden;}
+.slide.active{display:flex;}
+.slide.left{align-items:flex-start;text-align:left;}
+
+/* ── Typography ── */
+h1{font-size:3rem;font-weight:800;line-height:1.15;margin-bottom:.75rem;}
+h2{font-size:1.9rem;font-weight:700;margin-bottom:1.25rem;line-height:1.2;}
+h3{font-size:1.1rem;font-weight:600;margin-bottom:.4rem;}
+p{font-size:.95rem;color:var(--muted);line-height:1.65;max-width:740px;}
+.big{font-size:1.2rem;color:var(--text);max-width:820px;line-height:1.7;}
+.sub{font-size:1rem;color:var(--muted);max-width:700px;line-height:1.6;margin-top:.5rem;}
+code{font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:.87em;
+  background:#e8edf2;border:1px solid var(--border);
+  border-radius:4px;padding:1px 5px;color:var(--bl);}
+.hl{color:var(--gl);}
+.hl-b{color:var(--bl);}
+.hl-o{color:var(--ol);}
+.hl-p{color:var(--pl);}
+.hl-r{color:var(--rl);}
+
+/* ── Badge / Pill ── */
+.badge{display:inline-flex;align-items:center;gap:.4rem;padding:4px 14px;
+  border-radius:20px;font-size:.72rem;font-weight:600;letter-spacing:.06em;
+  margin-bottom:1.25rem;}
+.g{background:rgba(26,127,55,.12);color:var(--gl);border:1px solid rgba(26,127,55,.4);}
+.b{background:rgba(5,80,174,.1);color:var(--bl);border:1px solid rgba(5,80,174,.35);}
+.o{background:rgba(154,103,0,.1);color:var(--ol);border:1px solid rgba(154,103,0,.35);}
+.p{background:rgba(102,57,186,.1);color:var(--pl);border:1px solid rgba(102,57,186,.35);}
+.r{background:rgba(207,34,46,.1);color:var(--rl);border:1px solid rgba(207,34,46,.35);}
+
+/* ── Code block ── */
+pre{background:#f0f2f5;border:1px solid var(--border);border-radius:10px;
+  padding:1.1rem 1.4rem;text-align:left;
+  font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:.8rem;
+  line-height:1.65;max-width:900px;width:100%;overflow-x:auto;tab-size:2;
+  color:var(--text);}
+pre .k{color:#cf222e;}     /* keywords */
+pre .kw{color:#6639ba;}    /* yaml keys */
+pre .v{color:#0550ae;}     /* values */
+pre .s{color:#1a7f37;}     /* strings */
+pre .c{color:#8c959f;font-style:italic;} /* comments */
+pre .n{color:#9a6700;}     /* numbers */
+pre .cmd{color:#1a7f37;}   /* shell commands */
+pre .dollar{color:#8c959f;}
+pre .out{color:#57606a;}
+
+/* ── Terminal mockup ── */
+.terminal{background:#f0f2f5;border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;max-width:860px;width:100%;}
+.term-bar{background:#e1e4e8;padding:.45rem .8rem;display:flex;align-items:center;gap:.5rem;}
+.term-dot{width:12px;height:12px;border-radius:50%;}
+.t-r{background:#ff5f56;} .t-y{background:#ffbd2e;} .t-g{background:#27c93f;}
+.term-title{font-size:.72rem;color:var(--muted);margin-left:.5rem;font-family:monospace;}
+.term-body{padding:1rem 1.25rem;font-family:'SF Mono','Fira Code',Consolas,monospace;
+  font-size:.8rem;line-height:1.7;color:var(--text);}
+
+/* ── Pipeline visual ── */
+.pipeline{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center;
+  margin:1.25rem 0;}
+.pstage{background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:.8rem 1.1rem;text-align:center;min-width:105px;cursor:default;
+  transition:border-color .2s,transform .2s;}
+.pstage:hover{transform:translateY(-2px);}
+.pstage .icon{font-size:1.4rem;}
+.pstage .nm{font-size:.85rem;font-weight:600;margin-top:3px;}
+.pstage .sb{font-size:.68rem;color:var(--muted);}
+.arr{color:var(--gl);font-size:1.3rem;flex-shrink:0;}
+
+/* ── Two-column ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;width:100%;max-width:920px;text-align:left;}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;width:100%;max-width:960px;text-align:left;}
+.four{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;width:100%;max-width:980px;text-align:left;}
+
+/* ── Card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:1.1rem 1rem;}
+.card .icon{font-size:1.6rem;margin-bottom:.4rem;}
+.card h3{font-size:.95rem;margin-bottom:.25rem;}
+.card p{font-size:.82rem;color:var(--muted);}
+.card .tag{font-size:.68rem;color:var(--gl);font-weight:600;margin-bottom:.4rem;display:block;
+  text-transform:uppercase;letter-spacing:.06em;}
+.card.b-b{border-color:var(--blue);}
+.card.b-g{border-color:var(--green);}
+.card.b-o{border-color:var(--orange);}
+.card.b-p{border-color:var(--purple);}
+.card.b-r{border-color:var(--red);}
+.card.b-t{border-color:var(--teal);}
+
+/* ── Table ── */
+table{border-collapse:collapse;width:100%;max-width:900px;font-size:.85rem;margin-top:.75rem;}
+th{background:#e8edf2;color:var(--muted);padding:.55rem .9rem;text-align:left;
+  border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;}
+td{padding:.65rem .9rem;border-bottom:1px solid var(--border2);vertical-align:top;line-height:1.5;}
+tr:last-child td{border-bottom:none;}
+td:first-child{color:var(--gl);font-weight:600;white-space:nowrap;}
+td code{font-size:.8em;}
+
+/* ── Checklist ── */
+.list{list-style:none;text-align:left;max-width:780px;width:100%;}
+.list li{padding:.4rem 0;font-size:.9rem;color:var(--muted);display:flex;align-items:flex-start;gap:.7rem;line-height:1.5;}
+.list li .dot{color:var(--gl);font-weight:700;flex-shrink:0;margin-top:1px;}
+.list li strong{color:var(--text);}
+.list.sm li{font-size:.82rem;padding:.3rem 0;}
+
+/* ── Info box ── */
+.info-box{border-radius:10px;padding:1rem 1.25rem;max-width:800px;width:100%;text-align:left;margin:.75rem 0;}
+.info-box p{font-size:.88rem;line-height:1.6;}
+.info-box .label{font-size:.7rem;font-weight:600;letter-spacing:.07em;margin-bottom:.4rem;}
+.box-r{background:#fff0f0;border:1px solid rgba(207,34,46,.25);}
+.box-r .label{color:var(--rl);}
+.box-r p{color:var(--text);}
+.box-g{background:#f0fff4;border:1px solid rgba(26,127,55,.25);}
+.box-g .label{color:var(--gl);}
+.box-g p{color:var(--text);}
+.box-b{background:#f0f6ff;border:1px solid rgba(5,80,174,.2);}
+.box-b .label{color:var(--bl);}
+.box-b p{color:var(--text);}
+.box-o{background:#fffbf0;border:1px solid rgba(154,103,0,.25);}
+.box-o .label{color:var(--ol);}
+.box-o p{color:var(--text);}
+.box-p{background:#f8f4ff;border:1px solid rgba(102,57,186,.2);}
+.box-p .label{color:var(--pl);}
+.box-p p{color:var(--text);}
+
+/* ── Step list ── */
+.steps{counter-reset:step;list-style:none;text-align:left;max-width:780px;width:100%;}
+.steps li{counter-increment:step;padding:.5rem 0 .5rem 2.5rem;position:relative;font-size:.88rem;color:var(--muted);line-height:1.55;}
+.steps li::before{content:counter(step);position:absolute;left:0;top:.45rem;
+  width:20px;height:20px;background:var(--green);color:#fff;border-radius:50%;
+  font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.steps li strong{color:var(--text);}
+
+/* ── Divider ── */
+.divider{width:60px;height:2px;background:var(--green);margin:.75rem auto;border-radius:2px;}
+
+/* ── Stat ── */
+.stats{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin:1rem 0;}
+.stat{text-align:center;}
+.stat .num{font-size:2.2rem;font-weight:800;color:var(--gl);}
+.stat .lbl{font-size:.75rem;color:var(--muted);margin-top:.2rem;}
+
+/* ── Quote ── */
+.quote{border-left:3px solid var(--gl);padding:.6rem 1.25rem;text-align:left;
+  max-width:700px;margin:.75rem 0;}
+.quote p{color:var(--text);font-size:1.05rem;font-style:italic;line-height:1.6;}
+.quote .attr{font-size:.78rem;color:var(--muted);margin-top:.4rem;font-style:normal;}
+
+/* ── Title slide ── */
+.author-bar{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;
+  margin-top:2rem;font-size:.82rem;color:var(--muted);}
+.author-bar span strong{color:var(--text);}
+.author-bar .sep{color:var(--border);}
+
+/* ── Demo callout ── */
+.demo-callout{background:var(--surface);border:2px solid var(--green);border-radius:14px;
+  padding:2rem 2.5rem;max-width:760px;width:100%;text-align:left;}
+.demo-callout .step-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--gl);margin-bottom:.75rem;}
+.demo-callout h2{margin-bottom:1rem;}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="slide-label"></div>
+<div id="section-tag"></div>
+
+<div class="deck" id="deck">
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Title" data-section="">
+  <div class="badge g">▶ 60-Min Demo · Beginner Friendly</div>
+  <h1>Containers on AWS</h1>
+  <div class="divider"></div>
+  <p class="big">From "it works on my machine" to running a real app on ECS Fargate.<br/>
+  Docker basics · ECR · ECS · EKS · App Runner — all in 60 minutes.</p>
+  <div class="author-bar">
+    <span><strong>Charan Dasari</strong></span>
+    <span class="sep">|</span>
+    <span>AWS · Terraform · FastAPI · Next.js</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2 — AGENDA
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Agenda" data-section="">
+  <div class="badge b">Today's Agenda</div>
+  <h2>60 Minutes. 8 Sections.</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Section</th><th>Format</th></tr></thead>
+    <tbody>
+      <tr><td>0–8 min</td><td>What are containers? Why do they exist?</td><td>Concepts</td></tr>
+      <tr><td>8–15 min</td><td>Docker basics — images, Dockerfiles, commands</td><td>Demo</td></tr>
+      <tr><td>15–22 min</td><td>AWS container services overview — ECR, ECS, EKS, App Runner</td><td>Concepts</td></tr>
+      <tr><td>22–35 min</td><td>Live demo — build image &amp; push to ECR</td><td>Live demo</td></tr>
+      <tr><td>35–52 min</td><td>Live demo — deploy to ECS Fargate</td><td>Live demo</td></tr>
+      <tr><td>52–57 min</td><td>EKS vs App Runner — when to use what</td><td>Comparison</td></tr>
+      <tr><td>57–60 min</td><td>Recap + Q&amp;A</td><td>Discussion</td></tr>
+    </tbody>
+  </table>
+  <div class="info-box box-g" style="margin-top:1rem">
+    <p>By the end of this session you'll have seen a real app containerized, pushed to ECR, and running live on ECS Fargate — with zero EC2 servers to manage.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3 — TODAY'S GOAL
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Today's Goal" data-section="">
+  <div class="badge g">Goal</div>
+  <h1>By the end of this session...</h1>
+  <div class="divider"></div>
+  <p class="big">You will have seen a real app containerized, pushed to ECR, and running live on ECS Fargate — with zero EC2 servers to manage.</p>
+  <div class="stats" style="margin-top:2rem">
+    <div class="stat"><div class="num">1</div><div class="lbl">app containerized</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">image in ECR</div></div>
+    <div class="stat"><div class="num">0</div><div class="lbl">EC2 servers managed</div></div>
+    <div class="stat"><div class="num">live</div><div class="lbl">app in browser</div></div>
+  </div>
+  <div class="quote" style="margin-top:1.5rem">
+    <p>Containers are not magic. They're a packaging format. Once you understand that, everything else clicks.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4 — THE PROBLEM
+══════════════════════════════════════════ -->
+<div class="slide" data-label="The Problem" data-section="Section 1 · What Are Containers">
+  <div class="badge r">Section 1 · 0–8 min</div>
+  <h2>"It Works on My Machine"</h2>
+  <div class="two">
+    <div>
+      <div class="info-box box-r">
+        <div class="label">❌ Developer's Laptop</div>
+        <ul class="list sm">
+          <li><span class="dot">×</span><span>Node.js 18 installed</span></li>
+          <li><span class="dot">×</span><span>Python 3.11 installed</span></li>
+          <li><span class="dot">×</span><span>macOS Sonoma</span></li>
+          <li><span class="dot">×</span><span>Local env vars set in <code>.zshrc</code></span></li>
+          <li><span class="dot">×</span><span>Works perfectly. Ships to prod.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-o">
+        <div class="label">⚠ Production Server</div>
+        <ul class="list sm">
+          <li><span class="dot">×</span><span>Node.js 14 installed (different version)</span></li>
+          <li><span class="dot">×</span><span>Python 3.8 installed (different version)</span></li>
+          <li><span class="dot">×</span><span>Amazon Linux 2023</span></li>
+          <li><span class="dot">×</span><span>Env vars not set — who sets those?</span></li>
+          <li><span class="dot">×</span><span>App crashes. 3am pager alert. Weekend ruined.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="info-box box-b" style="margin-top:.5rem">
+    <div class="label">💡 The Root Cause</div>
+    <p>The app depends on the environment it runs in. Every server is slightly different. The solution: <strong>ship the environment with the app.</strong></p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5 — VMs VS CONTAINERS
+══════════════════════════════════════════ -->
+<div class="slide" data-label="VMs vs Containers" data-section="Section 1 · What Are Containers">
+  <div class="badge r">Section 1 · Continued</div>
+  <h2>VMs vs Containers</h2>
+  <div class="two">
+    <div>
+      <div class="info-box box-o">
+        <div class="label">🖥 Virtual Machine (VM)</div>
+        <pre style="margin:.5rem 0;font-size:.76rem;background:transparent;border:none;padding:0">┌──────────────────────┐
+│     Your App         │
+├──────────────────────┤
+│  Full Guest OS       │  ← 2–10 GB
+│  (Ubuntu, Windows)   │
+├──────────────────────┤
+│  Hypervisor          │
+├──────────────────────┤
+│  Physical Server     │
+└──────────────────────┘</pre>
+        <ul class="list sm" style="max-width:100%;margin-top:.5rem">
+          <li><span class="dot">×</span><span>Each app carries a full OS</span></li>
+          <li><span class="dot">×</span><span>Minutes to boot</span></li>
+          <li><span class="dot">×</span><span>GBs of disk per instance</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-g">
+        <div class="label">📦 Container</div>
+        <pre style="margin:.5rem 0;font-size:.76rem;background:transparent;border:none;padding:0">┌────────┐ ┌────────┐ ┌────────┐
+│ App A  │ │ App B  │ │ App C  │
+│ libs   │ │ libs   │ │ libs   │
+└────────┘ └────────┘ └────────┘
+├──────────────────────────────┤
+│      Shared OS Kernel        │  ← 1 kernel
+├──────────────────────────────┤
+│      Physical Server         │
+└──────────────────────────────┘</pre>
+        <ul class="list sm" style="max-width:100%;margin-top:.5rem">
+          <li><span class="dot">✓</span><span>Shared kernel — no duplicate OS</span></li>
+          <li><span class="dot">✓</span><span>Milliseconds to start</span></li>
+          <li><span class="dot">✓</span><span>MBs of disk per container</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6 — SHIPPING CONTAINER ANALOGY
+══════════════════════════════════════════ -->
+<div class="slide" data-label="The Analogy" data-section="Section 1 · What Are Containers">
+  <div class="badge r">Section 1 · Continued</div>
+  <h2>The Shipping Container Analogy</h2>
+  <div class="two" style="max-width:800px">
+    <div class="card b-o">
+      <div class="icon">🚢</div>
+      <span class="tag">Physical Shipping Container</span>
+      <h3>Standardized box</h3>
+      <p>Doesn't matter if it's on a ship, a truck, or a port crane — it fits the same way every time. The <strong>contents</strong> don't change based on the vehicle.</p>
+    </div>
+    <div class="card b-b">
+      <div class="icon">📦</div>
+      <span class="tag">Docker Container</span>
+      <h3>Standardized package</h3>
+      <p>Doesn't matter if it runs on your laptop, a staging server, or AWS — it behaves the same way every time. The <strong>app</strong> doesn't change based on the host.</p>
+    </div>
+  </div>
+  <div class="info-box box-g" style="margin-top:1rem;max-width:800px">
+    <div class="label">✅ The Key Insight</div>
+    <p>Before shipping containers, cargo was loaded piece by piece — slow, error-prone, different at every port. After standardization: one format, works everywhere. Docker did the same thing for software.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7 — CONTAINER ANATOMY
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Container Anatomy" data-section="Section 1 · What Are Containers">
+  <div class="badge r">Section 1 · Continued</div>
+  <h2>Image vs Container</h2>
+  <div class="pipeline" style="margin:1.5rem 0">
+    <div class="pstage" style="border-color:var(--blue);min-width:160px">
+      <div class="icon">📋</div>
+      <div class="nm">Docker Image</div>
+      <div class="sb">Blueprint / template</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green);min-width:160px">
+      <div class="icon">▶</div>
+      <div class="nm">docker run</div>
+      <div class="sb">Instantiate it</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green);min-width:160px">
+      <div class="icon">📦</div>
+      <div class="nm">Container</div>
+      <div class="sb">Running instance</div>
+    </div>
+  </div>
+  <div class="two" style="max-width:820px">
+    <div class="info-box box-b">
+      <div class="label">💡 Code Analogy</div>
+      <p>An <strong>Image</strong> is like a <strong>class</strong> in code — a definition, a blueprint. A <strong>Container</strong> is like an <strong>object</strong> — an instance of that class, running in memory. One image can spawn many containers simultaneously.</p>
+    </div>
+    <div class="info-box box-g">
+      <div class="label">✅ Why This Matters</div>
+      <p>You build the image <strong>once</strong>. That exact same image runs on your laptop, CI system, and production — guaranteed to behave identically. No more environment drift.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8 — WHY CONTAINERS ON AWS
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Why Containers on AWS" data-section="Section 1 · What Are Containers">
+  <div class="badge r">Section 1 · Continued</div>
+  <h2>Why Run Containers on AWS?</h2>
+  <div class="three" style="max-width:900px">
+    <div class="card b-g">
+      <div class="icon">🔁</div>
+      <span class="tag">Consistency</span>
+      <h3>Same image everywhere</h3>
+      <p>Build once, run the same image in dev, staging, and prod. No environment drift. No "it worked in staging" excuses.</p>
+    </div>
+    <div class="card b-b">
+      <div class="icon">🚀</div>
+      <span class="tag">Fast Deploys</span>
+      <h3>Seconds, not minutes</h3>
+      <p>Containers start in milliseconds. Deploy a new version by swapping the image. ECS handles the rollout automatically.</p>
+    </div>
+    <div class="card b-o">
+      <div class="icon">📊</div>
+      <span class="tag">Density</span>
+      <h3>More apps per server</h3>
+      <p>Run dozens of containers on one EC2 instance. Each isolated. Much better resource utilization than one VM per app.</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">🧩</div>
+      <span class="tag">Microservices</span>
+      <h3>One container per service</h3>
+      <p>Scale each service independently. The API container can run 10 copies; the background worker runs 2. Pay for what you use.</p>
+    </div>
+    <div class="card b-t">
+      <div class="icon">🌍</div>
+      <span class="tag">Portability</span>
+      <h3>Not locked to AWS</h3>
+      <p>The same Docker image runs on AWS, GCP, Azure, or your local machine. Cloud-agnostic by design.</p>
+    </div>
+    <div class="card b-r">
+      <div class="icon">⚡</div>
+      <span class="tag">Fargate Option</span>
+      <h3>No servers to manage</h3>
+      <p>AWS Fargate runs your containers without you provisioning EC2 instances. Just define vCPU and memory — AWS handles the rest.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 9 — DOCKER IMAGE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Docker Image" data-section="Section 2 · Docker 101">
+  <div class="badge b">Section 2 · 8–15 min</div>
+  <h2>Docker Images — Layers All the Way Down</h2>
+  <div class="two">
+    <div>
+      <p style="margin-bottom:1rem">A Docker image is built from <strong>layers</strong>. Each instruction in a Dockerfile adds a layer. Layers are cached — only changed layers are rebuilt. This is what makes Docker builds fast.</p>
+      <div class="info-box box-b">
+        <div class="label">📋 Image Layers (Bottom to Top)</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot" style="color:var(--ol)">▸</span><span><strong>Base layer</strong> — <code>FROM nginx:alpine</code> — the foundation OS/runtime</span></li>
+          <li><span class="dot" style="color:var(--bl)">▸</span><span><strong>Dependency layer</strong> — <code>RUN npm install</code> — installed packages</span></li>
+          <li><span class="dot" style="color:var(--gl)">▸</span><span><strong>App layer</strong> — <code>COPY . .</code> — your source code</span></li>
+          <li><span class="dot" style="color:var(--pl)">▸</span><span><strong>Config layer</strong> — <code>ENV</code>, <code>EXPOSE</code>, <code>CMD</code> — runtime config</span></li>
+        </ul>
+      </div>
+      <div class="info-box box-g" style="margin-top:.5rem">
+        <div class="label">✅ Layer Caching Rule</div>
+        <p>Put things that change least often at the top of your Dockerfile. Put your app code last. This way, <code>npm install</code> is only re-run when <code>package.json</code> changes — not on every code edit.</p>
+      </div>
+    </div>
+    <div>
+      <div class="terminal">
+        <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">docker build output</span></div>
+        <div class="term-body">
+          <span class="dollar">$ </span><span class="cmd">docker build -t my-app .</span><br/>
+          <span class="out">Step 1/5 : FROM nginx:alpine</span><br/>
+          <span class="s">&nbsp;---&gt; 7e1e4a93e8c2</span><br/>
+          <span class="out">Step 2/5 : COPY index.html /usr/share/nginx/html/</span><br/>
+          <span class="s">&nbsp;---&gt; 3b4d5e6f7a89</span><br/>
+          <span class="out">Step 3/5 : EXPOSE 80</span><br/>
+          <span class="s">&nbsp;---&gt; a1b2c3d4e5f6</span><br/>
+          <span class="out">Step 4/5 : CMD ["nginx", "-g", "daemon off;"]</span><br/>
+          <span class="s">&nbsp;---&gt; g7h8i9j0k1l2</span><br/>
+          <span class="out">Successfully built g7h8i9j0k1l2</span><br/>
+          <span class="s">Successfully tagged my-app:latest</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 10 — DOCKERFILE
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Dockerfile" data-section="Section 2 · Docker 101">
+  <div class="badge b">Section 2 · Continued</div>
+  <h2>The Dockerfile — Our App's Blueprint</h2>
+  <div class="two">
+    <div>
+      <pre><span class="c"># Start from the official nginx image</span>
+<span class="c"># alpine = lightweight Linux variant (~5MB)</span>
+<span class="k">FROM</span> <span class="s">nginx:alpine</span>
+
+<span class="c"># Copy our HTML app into the nginx web root</span>
+<span class="k">COPY</span> <span class="v">index.html /usr/share/nginx/html/index.html</span>
+
+<span class="c"># Tell Docker this container listens on port 80</span>
+<span class="k">EXPOSE</span> <span class="n">80</span>
+
+<span class="c"># Command to run when the container starts</span>
+<span class="k">CMD</span> <span class="s">["nginx", "-g", "daemon off;"]</span></pre>
+      <div class="info-box box-g" style="margin-top:.75rem">
+        <div class="label">✅ Zero Code Changes</div>
+        <p>The HTML app in this repo works without modification. We just wrap it in a container. Same <code>index.html</code> — now portable everywhere.</p>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:.75rem;color:var(--bl)">Dockerfile Instructions</h3>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong><code>FROM</code></strong> — base image. Everything builds on top of this. <code>nginx:alpine</code> gives us a web server in ~5MB.</span></li>
+        <li><span class="dot">▸</span><span><strong><code>COPY</code></strong> — copy files from your local machine into the image. Source → Destination.</span></li>
+        <li><span class="dot">▸</span><span><strong><code>RUN</code></strong> — execute a shell command during build. Use for <code>npm install</code>, <code>pip install</code>, etc.</span></li>
+        <li><span class="dot">▸</span><span><strong><code>EXPOSE</code></strong> — document which port the app listens on. Informational — doesn't publish the port automatically.</span></li>
+        <li><span class="dot">▸</span><span><strong><code>ENV</code></strong> — set environment variables available at runtime.</span></li>
+        <li><span class="dot">▸</span><span><strong><code>CMD</code></strong> — the default command to run when the container starts. Only one CMD per Dockerfile.</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 11 — KEY DOCKER COMMANDS
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Docker Commands" data-section="Section 2 · Docker 101">
+  <div class="badge b">Section 2 · Continued</div>
+  <h2>Key Docker Commands</h2>
+  <div class="two">
+    <div>
+      <div class="terminal">
+        <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">bash — docker essentials</span></div>
+        <div class="term-body">
+          <span class="c"># Build an image from a Dockerfile</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker build -t my-app:v1 .</span><br/><br/>
+          <span class="c"># Run a container (port 8080 on host → 80 in container)</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker run -d -p 8080:80 --name webapp my-app:v1</span><br/><br/>
+          <span class="c"># List running containers</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker ps</span><br/>
+          <span class="out">CONTAINER ID   IMAGE       PORTS</span><br/>
+          <span class="s">a3b1c2d4e5f6   my-app:v1   0.0.0.0:8080->80/tcp</span><br/><br/>
+          <span class="c"># List all local images</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker images</span><br/>
+          <span class="out">REPOSITORY   TAG    IMAGE ID       SIZE</span><br/>
+          <span class="s">my-app       v1     g7h8i9j0k1l2   23MB</span><br/><br/>
+          <span class="c"># Stop and remove a container</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker stop webapp &amp;&amp; docker rm webapp</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:.75rem;color:var(--bl)">Command Cheat Sheet</h3>
+      <table style="font-size:.8rem">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>docker build</code></td><td>Build image from Dockerfile</td></tr>
+          <tr><td><code>docker run</code></td><td>Create &amp; start a container</td></tr>
+          <tr><td><code>docker ps</code></td><td>List running containers</td></tr>
+          <tr><td><code>docker images</code></td><td>List local images</td></tr>
+          <tr><td><code>docker logs</code></td><td>View container stdout/stderr</td></tr>
+          <tr><td><code>docker exec -it</code></td><td>Open shell inside container</td></tr>
+          <tr><td><code>docker stop</code></td><td>Stop a running container</td></tr>
+          <tr><td><code>docker rm</code></td><td>Remove a stopped container</td></tr>
+          <tr><td><code>docker rmi</code></td><td>Remove an image</td></tr>
+          <tr><td><code>docker push</code></td><td>Push image to a registry</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 12 — IMAGE → ECR
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Image Registries" data-section="Section 2 · Docker 101">
+  <div class="badge b">Section 2 · Continued</div>
+  <h2>Images Live in Registries</h2>
+  <div class="pipeline" style="margin:1.5rem 0">
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">📋</div>
+      <div class="nm">Dockerfile</div>
+      <div class="sb">The recipe</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)">
+      <div class="icon">🔨</div>
+      <div class="nm">docker build</div>
+      <div class="sb">Produces an image</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">📤</div>
+      <div class="nm">docker push</div>
+      <div class="sb">Uploads to registry</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--purple)">
+      <div class="icon">🗄️</div>
+      <div class="nm">ECR</div>
+      <div class="sb">Private registry</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--gl)">
+      <div class="icon">📦</div>
+      <div class="nm">ECS / EKS</div>
+      <div class="sb">Pulls &amp; runs it</div>
+    </div>
+  </div>
+  <div class="two" style="max-width:820px">
+    <div class="info-box box-b">
+      <div class="label">🗄 What Is a Registry?</div>
+      <p>A registry is a storage service for Docker images. Like GitHub for code — but for container images. <strong>Docker Hub</strong> is the public default. <strong>ECR</strong> is AWS's private, managed alternative. Images are tagged by version: <code>my-app:v1</code>, <code>my-app:latest</code>.</p>
+    </div>
+    <div class="info-box box-g">
+      <div class="label">✅ Why ECR Instead of Docker Hub?</div>
+      <p>ECR images stay inside AWS — no internet egress to pull them from ECS. IAM controls who can push or pull. Built-in image vulnerability scanning. No rate limiting. Integrates natively with ECS and EKS.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 13 — DOCKER VS THE APP
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Docker vs The App" data-section="Section 2 · Docker 101">
+  <div class="badge b">Section 2 · Continued</div>
+  <h2>Our App — Zero Code Changes Needed</h2>
+  <div class="two" style="max-width:820px">
+    <div>
+      <div class="info-box box-b">
+        <div class="label">📁 What We Have</div>
+        <pre style="margin:.5rem 0;font-size:.78rem;background:transparent;border:none;padding:0">app/
+  index.html      ← the app
+Dockerfile        ← we add this
+appspec.yml       ← (CodeDeploy, not needed)
+buildspec.yml     ← (CodeBuild, not needed)</pre>
+        <p style="margin-top:.5rem">The same HTML file that ran on Apache on EC2 will now run inside an nginx container. Nothing about <code>index.html</code> changes.</p>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-g">
+        <div class="label">✅ Old Way vs New Way</div>
+        <table style="margin-top:.25rem;font-size:.8rem">
+          <thead><tr><th>Old (EC2 + Apache)</th><th>New (Container)</th></tr></thead>
+          <tbody>
+            <tr><td>Install Apache manually</td><td><code>nginx:alpine</code> in image</td></tr>
+            <tr><td>Copy files to <code>/var/www/html/</code></td><td><code>COPY</code> in Dockerfile</td></tr>
+            <tr><td>Start Apache with lifecycle hook</td><td><code>CMD</code> in Dockerfile</td></tr>
+            <tr><td>EC2 instance to manage</td><td>Fargate — no EC2</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="info-box box-o" style="margin-top:.5rem;max-width:820px">
+    <div class="label">💡 The Point</div>
+    <p>Containerizing an existing app is often just writing a Dockerfile. The app code doesn't change. The infrastructure model does.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 14 — AWS SERVICES OVERVIEW
+══════════════════════════════════════════ -->
+<div class="slide" data-label="AWS Container Services" data-section="Section 3 · AWS Services">
+  <div class="badge p">Section 3 · 15–22 min</div>
+  <h2>4 Ways to Run Containers on AWS</h2>
+  <div class="four" style="max-width:1000px">
+    <div class="card b-o">
+      <div class="icon">🗄️</div>
+      <span class="tag">Storage</span>
+      <h3>ECR</h3>
+      <p>Elastic Container Registry. Store &amp; manage your Docker images. The starting point for everything else.</p>
+    </div>
+    <div class="card b-b">
+      <div class="icon">🎛️</div>
+      <span class="tag">Orchestration</span>
+      <h3>ECS</h3>
+      <p>Elastic Container Service. AWS-native container orchestrator. Two modes: EC2 or Fargate (serverless).</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">☸️</div>
+      <span class="tag">Kubernetes</span>
+      <h3>EKS</h3>
+      <p>Elastic Kubernetes Service. Managed Kubernetes. Full control, more complexity. For Kubernetes teams.</p>
+    </div>
+    <div class="card b-g">
+      <div class="icon">⚡</div>
+      <span class="tag">Fully Managed</span>
+      <h3>App Runner</h3>
+      <p>Point at an image or source code — App Runner handles load balancing, scaling, and TLS automatically.</p>
+    </div>
+  </div>
+  <div class="info-box box-b" style="margin-top:1rem;max-width:820px">
+    <div class="label">📌 What We're Using Today</div>
+    <p><strong>ECR</strong> to store the image. <strong>ECS Fargate</strong> to run it. These two together are the most common starting point for teams moving from VMs to containers on AWS.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 15 — ECR
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="ECR" data-section="Section 3 · AWS Services">
+  <div class="badge o">Section 3 · ECR</div>
+  <h2>ECR — Elastic Container Registry</h2>
+  <div class="two">
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Private Docker registry</strong> — fully managed by AWS. No servers to run. Pay only for storage and data transfer.</span></li>
+        <li><span class="dot">▸</span><span><strong>IAM-based access control</strong> — push/pull permissions controlled via IAM policies. No separate username/password management.</span></li>
+        <li><span class="dot">▸</span><span><strong>Integrated image scanning</strong> — scan every pushed image for known OS vulnerabilities (CVEs). Free basic scan; enhanced scan uses Inspector.</span></li>
+        <li><span class="dot">▸</span><span><strong>Lifecycle policies</strong> — automatically delete old image versions. Keep only the last 10 tagged images. Saves storage costs.</span></li>
+        <li><span class="dot">▸</span><span><strong>No egress charges from ECS</strong> — pulling images from ECR to ECS in the same region is free. No internet traffic.</span></li>
+        <li><span class="dot">▸</span><span><strong>Cross-region replication</strong> — replicate images to other regions automatically for multi-region deployments.</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="terminal">
+        <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">bash — ECR commands</span></div>
+        <div class="term-body">
+          <span class="c"># Authenticate Docker to ECR</span><br/>
+          <span class="dollar">$ </span><span class="cmd">aws ecr get-login-password --region us-east-1 \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">| docker login --username AWS \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">--password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com</span><br/>
+          <span class="s">Login Succeeded</span><br/><br/>
+          <span class="c"># Tag the image for ECR</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker tag my-app:v1 \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:v1</span><br/><br/>
+          <span class="c"># Push to ECR</span><br/>
+          <span class="dollar">$ </span><span class="cmd">docker push \</span><br/>
+          &nbsp;&nbsp;<span class="cmd">123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:v1</span><br/>
+          <span class="out">v1: digest: sha256:abc123... size: 23456</span><br/>
+          <span class="s">v1: pushed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 16 — ECS
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="ECS" data-section="Section 3 · AWS Services">
+  <div class="badge b">Section 3 · ECS</div>
+  <h2>ECS — Elastic Container Service</h2>
+  <div class="two">
+    <div>
+      <p style="margin-bottom:.75rem">ECS is AWS's native container orchestrator. It manages where containers run, keeps them healthy, and handles scaling — without you needing to know Kubernetes.</p>
+      <h3 style="color:var(--bl);margin-bottom:.5rem">Key Concepts</h3>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Task Definition</strong> — the blueprint. Defines which image to run, how much CPU/RAM, ports, env vars, and logging.</span></li>
+        <li><span class="dot">▸</span><span><strong>Task</strong> — a running instance of a task definition. Like a <code>docker run</code> but managed by ECS.</span></li>
+        <li><span class="dot">▸</span><span><strong>Service</strong> — keeps N copies of a task running. If one dies, ECS starts a replacement automatically.</span></li>
+        <li><span class="dot">▸</span><span><strong>Cluster</strong> — the logical grouping of tasks and services. One cluster per environment (dev, prod) is typical.</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="info-box box-b">
+        <div class="label">🖥 EC2 Launch Type</div>
+        <p>You provision and manage the EC2 instances. ECS schedules containers onto them. You control the instance type, patching, and scaling. More control, more ops work.</p>
+      </div>
+      <div class="info-box box-g" style="margin-top:.5rem">
+        <div class="label">⚡ Fargate Launch Type (What We Use)</div>
+        <p>No EC2 to manage. AWS provisions the compute for each task. You only define CPU and memory. Pay per second while the task runs. Perfect for teams who want to focus on the app, not the infrastructure.</p>
+      </div>
+      <div class="info-box box-o" style="margin-top:.5rem">
+        <div class="label">✅ When to Choose ECS</div>
+        <p>Most production workloads. AWS-native tooling. No Kubernetes expertise needed. Strong integration with ALB, IAM, CloudWatch, and CodeDeploy.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 17 — FARGATE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Fargate" data-section="Section 3 · AWS Services">
+  <div class="badge g">Section 3 · Fargate</div>
+  <h2>Fargate — Serverless Containers</h2>
+  <div class="pipeline" style="margin:1.5rem 0">
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">📋</div>
+      <div class="nm">Task Definition</div>
+      <div class="sb">image · vCPU · RAM</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">⚡</div>
+      <div class="nm">Fargate</div>
+      <div class="sb">AWS provisions compute</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)">
+      <div class="icon">📦</div>
+      <div class="nm">Container Runs</div>
+      <div class="sb">Your app is live</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--purple)">
+      <div class="icon">💰</div>
+      <div class="nm">Pay Per Use</div>
+      <div class="sb">vCPU + GB-second</div>
+    </div>
+  </div>
+  <div class="two" style="max-width:820px">
+    <div>
+      <div class="info-box box-g">
+        <div class="label">✅ What Fargate Handles For You</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">✓</span><span>EC2 instance provisioning</span></li>
+          <li><span class="dot">✓</span><span>OS patching and security updates</span></li>
+          <li><span class="dot">✓</span><span>Container runtime setup</span></li>
+          <li><span class="dot">✓</span><span>Bin-packing (fitting containers on hosts)</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="info-box box-b">
+        <div class="label">📊 Fargate Pricing (us-east-1)</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">▸</span><span><strong>vCPU:</strong> ~$0.04048 per vCPU-hour</span></li>
+          <li><span class="dot">▸</span><span><strong>Memory:</strong> ~$0.004445 per GB-hour</span></li>
+          <li><span class="dot">▸</span><span>0.5 vCPU + 1 GB = ~$25/month (24/7)</span></li>
+          <li><span class="dot">▸</span><span>Pay only while the task is running</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 18 — EKS
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="EKS" data-section="Section 3 · AWS Services">
+  <div class="badge p">Section 3 · EKS</div>
+  <h2>EKS — Elastic Kubernetes Service</h2>
+  <div class="two">
+    <div>
+      <ul class="list">
+        <li><span class="dot">▸</span><span><strong>Managed Kubernetes</strong> — AWS runs the Kubernetes control plane (API server, etcd). You manage the worker nodes (EC2 or Fargate).</span></li>
+        <li><span class="dot">▸</span><span><strong>Full Kubernetes API</strong> — every kubectl command works. Deploy Helm charts, use any Kubernetes operator, any CNCF tool.</span></li>
+        <li><span class="dot">▸</span><span><strong>Multi-cloud portability</strong> — the same Kubernetes manifests run on EKS, GKE, or AKS. If you ever leave AWS, your workloads come with you.</span></li>
+        <li><span class="dot">▸</span><span><strong>Cost:</strong> $0.10/hour per cluster (~$73/month) for the control plane, plus EC2 worker node costs.</span></li>
+        <li><span class="dot">▸</span><span><strong>Best for:</strong> teams with existing Kubernetes expertise, complex multi-service workloads, or multi-cloud requirements.</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="info-box box-r">
+        <div class="label">⚠ EKS Complexity Budget</div>
+        <p>Kubernetes has a real learning curve. If your team doesn't already know Kubernetes, don't start with EKS. Start with ECS Fargate. Move to EKS when you have a specific reason — not because it sounds more impressive.</p>
+      </div>
+      <div class="info-box box-b" style="margin-top:.5rem">
+        <div class="label">💡 ECS vs EKS — The One-Line Answer</div>
+        <p>If you need Kubernetes specifically — use EKS. If you just need to run containers on AWS reliably — use ECS Fargate. ECS is simpler, cheaper to start, and less to operate.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 19 — APP RUNNER
+══════════════════════════════════════════ -->
+<div class="slide" data-label="App Runner" data-section="Section 3 · AWS Services">
+  <div class="badge g">Section 3 · App Runner</div>
+  <h2>App Runner — Fastest Path to Production</h2>
+  <div class="pipeline" style="margin:1.5rem 0">
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">🗄️</div>
+      <div class="nm">ECR Image</div>
+      <div class="sb">or source code</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)">
+      <div class="icon">⚡</div>
+      <div class="nm">App Runner</div>
+      <div class="sb">point and click</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">🌍</div>
+      <div class="nm">Live App</div>
+      <div class="sb">HTTPS, auto-scaled</div>
+    </div>
+  </div>
+  <div class="two" style="max-width:820px">
+    <div class="info-box box-g">
+      <div class="label">✅ What App Runner Handles</div>
+      <ul class="list sm" style="max-width:100%">
+        <li><span class="dot">✓</span><span>Load balancer — provisioned automatically</span></li>
+        <li><span class="dot">✓</span><span>TLS certificate — HTTPS out of the box</span></li>
+        <li><span class="dot">✓</span><span>Auto-scaling — scales to zero when no traffic</span></li>
+        <li><span class="dot">✓</span><span>Health checks — replaces unhealthy instances</span></li>
+        <li><span class="dot">✓</span><span>Deployments — push a new image, App Runner rolls it out</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="info-box box-o">
+        <div class="label">⚡ When to Use App Runner</div>
+        <ul class="list sm" style="max-width:100%">
+          <li><span class="dot">✓</span><span>Simple web apps or APIs</span></li>
+          <li><span class="dot">✓</span><span>Teams that want zero infrastructure management</span></li>
+          <li><span class="dot">✓</span><span>Prototypes or MVPs — fastest time to production</span></li>
+          <li><span class="dot">✓</span><span>Workloads with variable or unpredictable traffic</span></li>
+        </ul>
+      </div>
+      <div class="info-box box-r" style="margin-top:.5rem">
+        <div class="label">⚠ Tradeoff</div>
+        <p>Less control than ECS. No VPC-level networking config. No task-level IAM roles (uses App Runner service role). Not suitable for complex multi-container workloads.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 20 — DEMO ARCHITECTURE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo Architecture" data-section="Section 4 · Demo Architecture">
+  <div class="badge o">Section 4 · What We're Building</div>
+  <h2>What We're Building Today</h2>
+  <div class="pipeline" style="margin:1.5rem 0;flex-wrap:wrap">
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">👩‍💻</div>
+      <div class="nm">Developer</div>
+      <div class="sb">index.html</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--blue)">
+      <div class="icon">📋</div>
+      <div class="nm">Dockerfile</div>
+      <div class="sb">nginx:alpine</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)">
+      <div class="icon">🔨</div>
+      <div class="nm">docker build</div>
+      <div class="sb">creates image</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)">
+      <div class="icon">🗄️</div>
+      <div class="nm">ECR</div>
+      <div class="sb">stores image</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--purple)">
+      <div class="icon">⚡</div>
+      <div class="nm">ECS Fargate</div>
+      <div class="sb">runs task</div>
+    </div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--gl)">
+      <div class="icon">🌍</div>
+      <div class="nm">Browser</div>
+      <div class="sb">live app</div>
+    </div>
+  </div>
+  <div class="info-box box-g" style="max-width:820px">
+    <div class="label">✅ What We Don't Touch</div>
+    <p>No EC2 instances. No Apache install scripts. No SSH. No CodeDeploy lifecycle hooks. The same HTML app — different infrastructure. That's the container promise.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 21 — OLD VS NEW
+══════════════════════════════════════════ -->
+<div class="slide left" data-label="Old vs New" data-section="Section 4 · Demo Architecture">
+  <div class="badge o">Section 4 · Continued</div>
+  <h2>Old Way vs New Way — Same App</h2>
+  <div class="two">
+    <div>
+      <h3 style="color:var(--rl);margin-bottom:.75rem">Old: EC2 + Apache Pipeline</h3>
+      <div class="pipeline" style="flex-direction:column;align-items:flex-start;gap:.4rem;margin:0">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--blue);min-width:130px"><div class="nm">CodeCommit</div><div class="sb">source code</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--green);min-width:130px"><div class="nm">CodeBuild</div><div class="sb">package artifact</div></div>
+        </div>
+        <div style="padding-left:1.5rem;color:var(--muted);font-size:.78rem">↓</div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--orange);min-width:130px"><div class="nm">CodeDeploy</div><div class="sb">lifecycle hooks</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--rl);min-width:130px"><div class="nm">EC2 + Apache</div><div class="sb">manage server</div></div>
+        </div>
+      </div>
+      <ul class="list sm" style="margin-top:.75rem">
+        <li><span class="dot" style="color:var(--rl)">×</span><span>EC2 instance to patch and maintain</span></li>
+        <li><span class="dot" style="color:var(--rl)">×</span><span>Apache install scripts and config</span></li>
+        <li><span class="dot" style="color:var(--rl)">×</span><span>appspec.yml lifecycle hooks</span></li>
+        <li><span class="dot" style="color:var(--rl)">×</span><span>Pay for EC2 whether app runs or not</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="color:var(--gl);margin-bottom:.75rem">New: Docker + ECS Fargate</h3>
+      <div class="pipeline" style="flex-direction:column;align-items:flex-start;gap:.4rem;margin:0">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--blue);min-width:130px"><div class="nm">Dockerfile</div><div class="sb">app + web server</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--green);min-width:130px"><div class="nm">docker build</div><div class="sb">creates image</div></div>
+        </div>
+        <div style="padding-left:1.5rem;color:var(--muted);font-size:.78rem">↓</div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="pstage" style="border-color:var(--orange);min-width:130px"><div class="nm">ECR</div><div class="sb">stores image</div></div>
+          <div class="arr">→</div>
+          <div class="pstage" style="border-color:var(--gl);min-width:130px"><div class="nm">ECS Fargate</div><div class="sb">no servers</div></div>
+        </div>
+      </div>
+      <ul class="list sm" style="margin-top:.75rem">
+        <li><span class="dot">✓</span><span>Zero EC2 instances to manage</span></li>
+        <li><span class="dot">✓</span><span>Web server included in image</span></li>
+        <li><span class="dot">✓</span><span>One Dockerfile replaces all lifecycle hooks</span></li>
+        <li><span class="dot">✓</span><span>Pay per second of task runtime</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 22 — DEMO STEP 1
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo Step 1" data-section="Section 5 · Live Demo">
+  <div class="badge g">Section 5 · 22–35 min · Live Demo</div>
+  <div class="demo-callout">
+    <div class="step-label">Step 1 of 5 — Watch the Terminal</div>
+    <h2>Build the Docker Image Locally</h2>
+    <div class="terminal" style="margin-top:1rem">
+      <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">bash — local machine</span></div>
+      <div class="term-body">
+        <span class="c"># Make sure you're in the project root</span><br/>
+        <span class="dollar">$ </span><span class="cmd">ls</span><br/>
+        <span class="out">Dockerfile  app/  appspec.yml  buildspec.yml  scripts/</span><br/><br/>
+        <span class="c"># Build the Docker image</span><br/>
+        <span class="dollar">$ </span><span class="cmd">docker build -t containers-demo:v1 .</span><br/>
+        <span class="out">Step 1/4 : FROM nginx:alpine</span><br/>
+        <span class="out">Step 2/4 : COPY app/index.html /usr/share/nginx/html/index.html</span><br/>
+        <span class="out">Step 3/4 : EXPOSE 80</span><br/>
+        <span class="out">Step 4/4 : CMD ["nginx", "-g", "daemon off;"]</span><br/>
+        <span class="s">Successfully built a1b2c3d4e5f6</span><br/>
+        <span class="s">Successfully tagged containers-demo:v1</span><br/><br/>
+        <span class="c"># Test it locally before pushing</span><br/>
+        <span class="dollar">$ </span><span class="cmd">docker run -d -p 8080:80 containers-demo:v1</span><br/>
+        <span class="c"># Open http://localhost:8080 in browser</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 23 — DEMO STEP 2
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo Step 2" data-section="Section 5 · Live Demo">
+  <div class="badge g">Section 5 · Live Demo</div>
+  <div class="demo-callout">
+    <div class="step-label">Step 2 of 5 — Watch the Console</div>
+    <h2>Push Image to ECR</h2>
+    <div class="terminal" style="margin-top:1rem">
+      <div class="term-bar"><div class="term-dot t-r"></div><div class="term-dot t-y"></div><div class="term-dot t-g"></div><span class="term-title">bash — push to ECR</span></div>
+      <div class="term-body">
+        <span class="c"># 1. Authenticate Docker to ECR</span><br/>
+        <span class="dollar">$ </span><span class="cmd">aws ecr get-login-password --region us-east-1 \</span><br/>
+        &nbsp;&nbsp;<span class="cmd">| docker login --username AWS \</span><br/>
+        &nbsp;&nbsp;<span class="cmd">--password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com</span><br/>
+        <span class="s">Login Succeeded</span><br/><br/>
+        <span class="c"># 2. Tag image with ECR URI</span><br/>
+        <span class="dollar">$ </span><span class="cmd">docker tag containers-demo:v1 \</span><br/>
+        &nbsp;&nbsp;<span class="cmd">123456789.dkr.ecr.us-east-1.amazonaws.com/containers-demo:v1</span><br/><br/>
+        <span class="c"># 3. Push to ECR</span><br/>
+        <span class="dollar">$ </span><span class="cmd">docker push \</span><br/>
+        &nbsp;&nbsp;<span class="cmd">123456789.dkr.ecr.us-east-1.amazonaws.com/containers-demo:v1</span><br/>
+        <span class="out">v1: digest: sha256:abc123... size: 8765</span><br/>
+        <span class="s">v1: pushed to repository</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 24 — DEMO STEP 3
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo Step 3" data-section="Section 5 · Live Demo">
+  <div class="badge g">Section 5 · 35–52 min · Live Demo</div>
+  <div class="demo-callout">
+    <div class="step-label">Step 3 of 5 — AWS Console</div>
+    <h2>Create ECS Cluster</h2>
+    <ol class="steps" style="margin-top:1rem">
+      <li><strong>Go to ECS Console</strong> — search "ECS" in AWS Console → Clusters → Create cluster</li>
+      <li><strong>Cluster name:</strong> <code>containers-demo-cluster</code></li>
+      <li><strong>Infrastructure:</strong> select <strong>AWS Fargate</strong> (serverless) — do not select EC2</li>
+      <li><strong>Leave defaults</strong> — CloudWatch Container Insights optional but useful</li>
+      <li><strong>Click Create</strong> — takes about 30 seconds. Cluster shows as Active.</li>
+    </ol>
+    <div class="info-box box-b" style="margin-top:1rem">
+      <div class="label">💡 What a Cluster Is</div>
+      <p>A cluster is a logical boundary — it groups tasks and services together. It doesn't provision any compute. With Fargate, the cluster is just a namespace. AWS provisions the underlying compute per task, not per cluster.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 25 — DEMO STEP 4
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo Step 4" data-section="Section 5 · Live Demo">
+  <div class="badge g">Section 5 · Live Demo</div>
+  <div class="demo-callout">
+    <div class="step-label">Step 4 of 5 — AWS Console</div>
+    <h2>Create Task Definition</h2>
+    <ol class="steps" style="margin-top:1rem">
+      <li><strong>ECS Console → Task Definitions → Create new task definition</strong></li>
+      <li><strong>Launch type:</strong> Fargate. <strong>OS:</strong> Linux/X86_64</li>
+      <li><strong>Task size:</strong> <code>0.5 vCPU</code>, <code>1 GB memory</code></li>
+      <li><strong>Container name:</strong> <code>web</code> — <strong>Image URI:</strong> paste your ECR image URI (<code>123456789.dkr.ecr.us-east-1.amazonaws.com/containers-demo:v1</code>)</li>
+      <li><strong>Port mappings:</strong> Container port <code>80</code>, Protocol TCP</li>
+      <li><strong>Logging:</strong> enable AWS CloudWatch Logs (auto-creates log group)</li>
+      <li><strong>Create</strong> — task definition is registered with revision <code>:1</code></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 26 — DEMO STEP 5
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Demo Step 5" data-section="Section 5 · Live Demo">
+  <div class="badge g">Section 5 · Live Demo</div>
+  <div class="demo-callout">
+    <div class="step-label">Step 5 of 5 — AWS Console</div>
+    <h2>Create ECS Service + Access the App</h2>
+    <div class="two" style="margin-top:1rem">
+      <ol class="steps" style="max-width:100%">
+        <li><strong>Cluster → Services → Create</strong></li>
+        <li><strong>Launch type:</strong> Fargate</li>
+        <li><strong>Task definition:</strong> select the one you just created</li>
+        <li><strong>Service name:</strong> <code>web-service</code> · <strong>Desired tasks:</strong> 1</li>
+        <li><strong>VPC:</strong> default VPC, public subnet, <strong>Auto-assign public IP:</strong> Enabled</li>
+        <li><strong>Security group:</strong> create new — allow inbound TCP port 80 from anywhere</li>
+        <li><strong>Click Create</strong> — service launches. Wait ~60 sec for task status: <strong>RUNNING</strong></li>
+        <li><strong>Click the task</strong> → copy the Public IP → open in browser</li>
+      </ol>
+      <div>
+        <div class="info-box box-g" style="margin-top:0">
+          <div class="label">✅ What You Should See</div>
+          <p>The same HTML app that was running on Apache on EC2 — now served from an nginx container on Fargate. No EC2 instance. No SSH. No Apache install scripts.</p>
+        </div>
+        <div class="info-box box-b" style="margin-top:.5rem">
+          <div class="label">💡 In Production</div>
+          <p>You'd put an Application Load Balancer in front of the service for a stable DNS name, health checks, and HTTPS. Today we access via public IP to keep it simple.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 27 — EKS VS APP RUNNER TABLE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="EKS vs App Runner" data-section="Section 6 · EKS vs App Runner">
+  <div class="badge p">Section 6 · 52–57 min</div>
+  <h2>EKS vs App Runner — Feature Comparison</h2>
+  <table style="max-width:900px">
+    <thead>
+      <tr><th>Feature</th><th>EKS</th><th>App Runner</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Control</td><td>Full Kubernetes control — networking, scheduling, storage</td><td>Limited — AWS controls the infrastructure entirely</td></tr>
+      <tr><td>Complexity</td><td>High — clusters, node groups, namespaces, Helm, RBAC</td><td>Very low — point at an image, set CPU/RAM, done</td></tr>
+      <tr><td>Kubernetes knowledge needed</td><td>Yes — significant learning investment</td><td>No — no Kubernetes concepts at all</td></tr>
+      <tr><td>Auto-scaling</td><td>HPA (Horizontal Pod Autoscaler) — configure manually</td><td>Built-in, automatic, scales to zero</td></tr>
+      <tr><td>Cost</td><td>$0.10/hr control plane + EC2/Fargate nodes</td><td>Pay per vCPU-hour + GB-hour while running</td></tr>
+      <tr><td>VPC networking</td><td>Full VPC integration, private subnets, security groups</td><td>VPC connector available, but limited config</td></tr>
+      <tr><td>Best for</td><td>Complex microservices, multi-cloud, Kubernetes-native teams</td><td>Simple APIs, web apps, MVPs, fast deployments</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 28 — WHICH ONE SHOULD I USE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Which Service?" data-section="Section 6 · EKS vs App Runner">
+  <div class="badge p">Section 6 · Continued</div>
+  <h2>Which One Should I Use?</h2>
+  <div class="three" style="max-width:900px">
+    <div class="card b-g">
+      <div class="icon">⚡</div>
+      <span class="tag">Start Here</span>
+      <h3>ECS Fargate</h3>
+      <p>No EC2 to manage. AWS-native tooling. Integrates with ALB, IAM, CloudWatch. Most teams doing containers on AWS start here.</p>
+    </div>
+    <div class="card b-o">
+      <div class="icon">🚀</div>
+      <span class="tag">Fastest Deploy</span>
+      <h3>App Runner</h3>
+      <p>If you want the absolute fastest path to a running HTTPS app — no networking config, no cluster setup. Great for proofs of concept.</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">☸️</div>
+      <span class="tag">Advanced</span>
+      <h3>EKS</h3>
+      <p>Move here when you need Kubernetes specifically — multi-cloud portability, Kubernetes operators, or your team already knows Kubernetes.</p>
+    </div>
+  </div>
+  <div class="info-box box-b" style="margin-top:1rem;max-width:820px">
+    <div class="label">📌 The Decision Rule</div>
+    <p><strong>Default to ECS Fargate or App Runner.</strong> Move to EKS only when you have a specific reason that requires Kubernetes — not because it sounds more impressive or because "everyone uses Kubernetes." Operational complexity is a cost.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 29 — KEY TAKEAWAYS
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Key Takeaways" data-section="">
+  <div class="badge g">Recap</div>
+  <h2>Key Takeaways</h2>
+  <ul class="list" style="max-width:720px;text-align:left">
+    <li><span class="dot">1</span><span><strong>Containers solve environment consistency.</strong> Ship the app and its runtime together. No more "it works on my machine."</span></li>
+    <li><span class="dot">2</span><span><strong>Docker builds images.</strong> A Dockerfile defines the layers. <code>docker build</code> produces a portable, versioned image.</span></li>
+    <li><span class="dot">3</span><span><strong>ECR stores images.</strong> AWS's private registry. IAM-controlled. No rate limits. Images stay inside AWS — no egress charges from ECS.</span></li>
+    <li><span class="dot">4</span><span><strong>ECS Fargate runs containers serverlessly.</strong> Define vCPU and memory. AWS provisions the compute. You pay per second. No EC2 to patch.</span></li>
+    <li><span class="dot">5</span><span><strong>Pick the right service for your needs.</strong> ECS Fargate for most workloads. App Runner for simplest path. EKS only when Kubernetes is specifically required.</span></li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 30 — NEXT STEPS
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Next Steps" data-section="">
+  <div class="badge b">Level Up</div>
+  <h2>Next Steps After This Session</h2>
+  <div class="three" style="max-width:900px">
+    <div class="card b-g">
+      <div class="icon">🔄</div>
+      <span class="tag">Add CI/CD</span>
+      <h3>Automate the Image Build</h3>
+      <p>Add a CodePipeline that builds the Docker image and pushes to ECR on every git push. No manual <code>docker build</code> or <code>docker push</code>.</p>
+    </div>
+    <div class="card b-b">
+      <div class="icon">☸️</div>
+      <span class="tag">Try EKS</span>
+      <h3>Deploy to EKS</h3>
+      <p>Use the same ECR image. Write a Kubernetes Deployment and Service manifest. Deploy with <code>kubectl apply</code>. See how ECS and EKS compare.</p>
+    </div>
+    <div class="card b-p">
+      <div class="icon">⚡</div>
+      <span class="tag">Try App Runner</span>
+      <h3>Point App Runner at ECR</h3>
+      <p>Go to App Runner console, point at your ECR image, click Deploy. Get an HTTPS URL in 2 minutes. Compare the experience with ECS.</p>
+    </div>
+    <div class="card b-o">
+      <div class="icon">🔍</div>
+      <span class="tag">Service Discovery</span>
+      <h3>ECS Service Connect</h3>
+      <p>Run two containers that communicate — a frontend and an API. Use ECS Service Connect for service-to-service discovery inside the cluster.</p>
+    </div>
+    <div class="card b-t">
+      <div class="icon">📊</div>
+      <span class="tag">Observability</span>
+      <h3>CloudWatch Container Insights</h3>
+      <p>Enable Container Insights on your cluster. Get CPU, memory, and network metrics per task — plus automated dashboards.</p>
+    </div>
+    <div class="card b-r">
+      <div class="icon">🔐</div>
+      <span class="tag">Security</span>
+      <h3>ECR Image Scanning</h3>
+      <p>Enable enhanced scanning on your ECR repo. Every push scans for CVEs and reports vulnerabilities. Block deployments of images with critical findings.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 31 — KEY TAKEAWAY QUOTE
+══════════════════════════════════════════ -->
+<div class="slide" data-label="The Big Idea" data-section="">
+  <div class="badge g">The Big Idea</div>
+  <h1>The Container Is the Unit of Deployment</h1>
+  <div class="divider"></div>
+  <p class="big">You used to deploy a server. Now you deploy a container. Same app, same behavior, any host — laptop, CI system, or AWS Fargate. That's the shift.</p>
+  <div class="pipeline" style="margin:2rem 0">
+    <div class="pstage" style="border-color:var(--blue)"><div class="icon">📋</div><div class="nm">Dockerfile</div><div class="sb">Recipe</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--green)"><div class="icon">🔨</div><div class="nm">docker build</div><div class="sb">Package</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--orange)"><div class="icon">🗄️</div><div class="nm">ECR</div><div class="sb">Store</div></div>
+    <div class="arr">→</div>
+    <div class="pstage" style="border-color:var(--gl)"><div class="icon">⚡</div><div class="nm">ECS Fargate</div><div class="sb">Run anywhere</div></div>
+  </div>
+  <div class="quote">
+    <p>Stop managing servers. Start shipping containers.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 32 — Q&A
+══════════════════════════════════════════ -->
+<div class="slide" data-label="Q&A" data-section="">
+  <div class="badge g">Q&amp;A · 57–60 min</div>
+  <h1>Questions?</h1>
+  <div class="divider"></div>
+  <p class="big">Everything we just built — the Dockerfile, ECR push commands, ECS cluster, and task definition — is repeatable. Your turn to try it.</p>
+  <div class="two" style="margin-top:1.5rem;max-width:700px">
+    <div class="card b-b" style="text-align:center">
+      <div class="icon">📦</div>
+      <h3>What We Covered</h3>
+      <p>Containers · Docker · ECR<br/>ECS Fargate · EKS · App Runner</p>
+    </div>
+    <div class="card b-g" style="text-align:center">
+      <div class="icon">🚀</div>
+      <h3>Your Next Move</h3>
+      <p>Write a Dockerfile for one of your apps.<br/>Push it to ECR. Run it on Fargate.</p>
+    </div>
+  </div>
+  <div class="author-bar" style="margin-top:2rem">
+    <span><strong>Charan Dasari</strong></span>
+    <span class="sep">|</span>
+    <span>AWS · Terraform · FastAPI · Next.js · Claude API</span>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ══ Nav ══ -->
+<nav class="nav">
+  <button onclick="prev()" title="Prev">◀</button>
+  <span class="ctr" id="ctr">1 / 32</span>
+  <button onclick="next()" title="Next">▶</button>
+</nav>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+let cur = 0;
+
+function show(n) {
+  slides[cur].classList.remove('active');
+  cur = ((n % slides.length) + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+  document.getElementById('slide-label').textContent = slides[cur].dataset.label || '';
+  document.getElementById('section-tag').textContent = slides[cur].dataset.section || '';
+  document.getElementById('progress').style.width = ((cur + 1) / slides.length * 100) + '%';
+}
+
+function next() { show(cur + 1); }
+function prev() { show(cur - 1); }
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key))        { e.preventDefault(); prev(); }
+});
+
+show(0);
+</script>
+</body>
+</html>
