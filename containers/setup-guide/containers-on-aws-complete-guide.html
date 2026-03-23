@@ -1,0 +1,2250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Containers on AWS — Complete Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --surface: #f6f7fb;
+  --surface2: #eceef7;
+  --surface3: #e2e5f0;
+  --border: #dde1ee;
+  --border-bright: #c2c8df;
+  --text: #12152a;
+  --text-muted: #44495f;
+  --text-dim: #8e94ae;
+  --accent: #4f46e5;
+  --accent2: #0d9a74;
+  --accent3: #c97a0a;
+  --accent4: #dc2626;
+  --beginner: #0d9a74;
+  --intermediate: #4f46e5;
+  --advanced: #c97a0a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Lora', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.progress-bar-container {
+  position: sticky; top: 0; z-index: 100;
+  height: 3px; background: var(--border);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--beginner), var(--accent), var(--advanced));
+  width: 0%; transition: width 0.1s;
+}
+
+.hero {
+  position: relative; padding: 80px 40px 60px;
+  text-align: center;
+  background: linear-gradient(180deg, #eef0fb 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--border); overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -80px; left: 50%;
+  transform: translateX(-50%); width: 600px; height: 300px;
+  background: radial-gradient(ellipse, rgba(79,70,229,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(79,70,229,0.08); border: 1px solid rgba(79,70,229,0.2);
+  border-radius: 100px; padding: 6px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 28px;
+}
+.hero-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.hero h1 {
+  font-family: 'Syne', sans-serif; font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800; line-height: 1.05; letter-spacing: -2px; margin-bottom: 20px;
+  background: linear-gradient(135deg, #12152a 0%, #3730a3 50%, #4f46e5 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero-sub {
+  font-size: 18px; color: var(--text-muted); max-width: 560px;
+  margin: 0 auto 40px; line-height: 1.7; font-style: italic;
+}
+
+.level-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.level-pill {
+  padding: 8px 20px; border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; border: 1.5px solid;
+}
+.level-pill.beginner    { color: var(--beginner);    border-color: var(--beginner);    background: rgba(13,154,116,0.06); }
+.level-pill.intermediate{ color: var(--intermediate); border-color: var(--intermediate); background: rgba(79,70,229,0.06); }
+.level-pill.advanced    { color: var(--advanced);    border-color: var(--advanced);    background: rgba(201,122,10,0.06); }
+.level-pill.all-btn     { color: var(--text-muted);  border-color: var(--border-bright); background: var(--surface); }
+.level-pill:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.level-pill.active.beginner     { background: rgba(13,154,116,0.14); }
+.level-pill.active.intermediate { background: rgba(79,70,229,0.14); }
+.level-pill.active.advanced     { background: rgba(201,122,10,0.14); }
+.level-pill.active.all-btn      { background: var(--surface2); color: var(--text); }
+
+.layout { display: grid; grid-template-columns: 260px 1fr; max-width: 1200px; margin: 0 auto; }
+
+.sidebar {
+  position: sticky; top: 3px; height: calc(100vh - 3px); overflow-y: auto;
+  padding: 32px 0; border-right: 1px solid var(--border);
+  background: var(--surface); scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar-section-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim); padding: 0 20px; margin: 24px 0 8px;
+}
+.sidebar-link {
+  display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+  font-family: 'Syne', sans-serif; font-size: 13px;
+  color: var(--text-muted); text-decoration: none;
+  cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent;
+}
+.sidebar-link:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+.sidebar-link.active { color: var(--text); background: rgba(79,70,229,0.06); border-left-color: var(--accent); }
+.sidebar-link .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-link.level-b .dot { background: var(--beginner); }
+.sidebar-link.level-i .dot { background: var(--intermediate); }
+.sidebar-link.level-a .dot { background: var(--advanced); }
+
+.content { padding: 40px 48px 120px; max-width: 820px; }
+
+.section { margin-bottom: 72px; animation: fadeIn 0.4s ease both; }
+.section.hidden { display: none; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.section-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
+.step-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--text-dim); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; flex-shrink: 0; margin-top: 6px;
+}
+.section-title-wrap h2 {
+  font-family: 'Syne', sans-serif; font-size: 28px;
+  font-weight: 800; letter-spacing: -0.5px; color: var(--text); line-height: 1.2;
+}
+.level-tag {
+  display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 4px; margin-top: 6px; font-weight: 700;
+}
+.level-tag.b { color: var(--beginner);    background: rgba(13,154,116,0.08); border: 1px solid rgba(13,154,116,0.2); }
+.level-tag.i { color: var(--intermediate); background: rgba(79,70,229,0.08);  border: 1px solid rgba(79,70,229,0.2); }
+.level-tag.a { color: var(--advanced);    background: rgba(201,122,10,0.08); border: 1px solid rgba(201,122,10,0.2); }
+
+.steps { display: flex; flex-direction: column; gap: 16px; }
+.step {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.step:hover { border-color: var(--border-bright); box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.step-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; cursor: pointer; user-select: none; background: #fff;
+}
+.step-num {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.step-num.b { background: rgba(13,154,116,0.10);  color: var(--beginner); }
+.step-num.i { background: rgba(79,70,229,0.10);   color: var(--intermediate); }
+.step-num.a { background: rgba(201,122,10,0.10);  color: var(--advanced); }
+.step-num.n { background: var(--surface2); color: var(--text-dim); }
+.step-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+.step-toggle {
+  width: 20px; height: 20px; color: var(--text-dim); transition: transform 0.2s;
+  font-size: 18px; line-height: 20px; text-align: center; flex-shrink: 0;
+}
+.step.open .step-toggle { transform: rotate(180deg); }
+.step-body {
+  display: none; padding: 0 20px 20px; border-top: 1px solid var(--border);
+  animation: slideDown 0.2s ease; background: #fff;
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.step.open .step-body { display: block; }
+.step-body p { color: var(--text-muted); font-size: 15px; line-height: 1.8; margin: 16px 0 12px; }
+.step-body ul, .step-body ol { color: var(--text-muted); font-size: 14px; line-height: 1.9; padding-left: 20px; margin: 8px 0; }
+.step-body li { margin-bottom: 4px; }
+.step-body strong { color: var(--text); }
+.step-body code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  background: var(--surface2); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--border); color: var(--accent);
+}
+
+.code-block {
+  position: relative; background: #f6f7fb; border: 1px solid var(--border);
+  border-radius: 10px; margin: 14px 0; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: #eceef7;
+}
+.code-lang { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+.copy-btn {
+  background: none; border: 1px solid var(--border-bright); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--accent); }
+.copy-btn.copied { color: var(--accent2); border-color: var(--accent2); }
+.code-block pre {
+  padding: 16px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--text-muted);
+}
+.code-block pre .cmd  { color: #2563eb; }
+.code-block pre .str  { color: #16a34a; }
+.code-block pre .cmt  { color: #9ca3af; font-style: italic; }
+.code-block pre .key  { color: #7c3aed; }
+.code-block pre .num  { color: #d97706; }
+.code-block pre .flag { color: #b45309; }
+
+.terminal {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin: 16px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #f0f1f6; border-bottom: 1px solid var(--border);
+}
+.terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+.terminal-dot:nth-child(1) { background: #ff5f57; }
+.terminal-dot:nth-child(2) { background: #febc2e; }
+.terminal-dot:nth-child(3) { background: #28c840; }
+.terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+.terminal-body { padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
+.terminal-body .prompt  { color: #0d7a50; }
+.terminal-body .out     { color: #44495f; }
+.terminal-body .success { color: #0d7a50; }
+.terminal-body .info    { color: #2563eb; }
+.terminal-body .warn    { color: #c97a0a; }
+
+.tip, .warning, .info-box {
+  border-radius: 10px; padding: 14px 18px; margin: 14px 0;
+  font-size: 14px; line-height: 1.7; display: flex; gap: 12px;
+}
+.tip      { background: rgba(13,154,116,0.06);  border: 1px solid rgba(13,154,116,0.18); color: #0a7a5c; }
+.warning  { background: rgba(201,122,10,0.06);  border: 1px solid rgba(201,122,10,0.18); color: #9a5e08; }
+.info-box { background: rgba(79,70,229,0.06);   border: 1px solid rgba(79,70,229,0.18);  color: #3730a3; }
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.checklist { list-style: none; padding: 0; margin: 12px 0; }
+.checklist li {
+  display: flex; align-items: flex-start; gap: 10px; padding: 6px 0;
+  font-size: 14px; color: var(--text-muted); border-bottom: 1px solid var(--border);
+}
+.checklist li:last-child { border-bottom: none; }
+.check-box {
+  width: 18px; height: 18px; border: 1.5px solid var(--border-bright);
+  border-radius: 5px; flex-shrink: 0; margin-top: 1px; cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.check-box:hover { border-color: var(--accent); }
+.check-box.checked { background: var(--accent); border-color: var(--accent); color: white; }
+
+.diagram {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin: 16px 0; text-align: center;
+}
+.diagram-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.diagram-node {
+  background: #fff; border: 1px solid var(--border-bright); border-radius: 10px;
+  padding: 12px 20px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.diagram-node.accent { border-color: var(--accent);      color: var(--accent);      background: rgba(79,70,229,0.05); }
+.diagram-node.green  { border-color: var(--beginner);    color: var(--beginner);    background: rgba(13,154,116,0.05); }
+.diagram-node.orange { border-color: var(--advanced);    color: var(--advanced);    background: rgba(201,122,10,0.05); }
+.diagram-arrow { color: var(--text-dim); font-size: 20px; }
+
+.file-tree {
+  background: #0f1117; border: 1px solid #1e2230; border-radius: 10px;
+  padding: 16px; margin: 14px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 2;
+}
+.file-tree .folder    { color: #61afef; }
+.file-tree .file      { color: #abb2bf; }
+.file-tree .important { color: #e5c07b; font-weight: 700; }
+.file-tree .indent1   { padding-left: 20px; }
+.file-tree .indent2   { padding-left: 40px; }
+.file-tree .indent3   { padding-left: 60px; }
+
+.skill-showcase { background: #0f1117; border: 1px solid #1e2230; border-radius: 12px; overflow: hidden; margin: 14px 0; }
+.skill-showcase-header {
+  padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid #1e2230;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #555;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.skill-showcase-body { padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8; color: #abb2bf; }
+.skill-showcase-body .sk-key     { color: #c678dd; }
+.skill-showcase-body .sk-val     { color: #98c379; }
+.skill-showcase-body .sk-comment { color: #5c6370; }
+.skill-showcase-body .sk-head    { color: #e5c07b; font-weight: bold; }
+.skill-showcase-body .sk-code    { color: #61afef; }
+
+.phase-divider { display: flex; align-items: center; gap: 16px; margin: 48px 0 32px; }
+.phase-divider-line { flex: 1; height: 1px; background: var(--border); }
+.phase-label {
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; padding: 6px 16px;
+  border-radius: 100px; border: 1px solid; white-space: nowrap;
+}
+.phase-label.b { color: var(--beginner);    border-color: rgba(13,154,116,0.25); background: rgba(13,154,116,0.05); }
+.phase-label.i { color: var(--intermediate); border-color: rgba(79,70,229,0.25);  background: rgba(79,70,229,0.05); }
+.phase-label.a { color: var(--advanced);    border-color: rgba(201,122,10,0.25); background: rgba(201,122,10,0.05); }
+.phase-label.n { color: var(--text-dim);    border-color: var(--border);         background: var(--surface); }
+
+.command-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; margin: 10px 0;
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s;
+}
+.command-card:hover { border-color: var(--border-bright); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.command-icon {
+  width: 36px; height: 36px; border-radius: 8px; background: rgba(79,70,229,0.08);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.command-name { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); margin-bottom: 2px; }
+.command-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.copy-cmd-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 5px 10px;
+  border-radius: 5px; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.copy-cmd-btn:hover { color: var(--text); border-color: var(--border-bright); background: var(--surface2); }
+
+/* COMPARISON TABLE */
+.compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.compare-table th {
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; padding: 10px 14px;
+  background: var(--surface2); color: var(--text-muted); text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+.compare-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  color: var(--text-muted); line-height: 1.5;
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tr:hover td { background: var(--surface); }
+.compare-table td:first-child { font-weight: 600; color: var(--text); font-family: 'Syne', sans-serif; font-size: 13px; }
+.compare-table .highlight { color: var(--accent); font-weight: 700; }
+.compare-table .good { color: var(--beginner); font-weight: 600; }
+.compare-table .badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace; font-weight: 700;
+}
+.compare-table .badge.green { background: rgba(13,154,116,0.1); color: var(--beginner); }
+.compare-table .badge.blue  { background: rgba(79,70,229,0.1);  color: var(--accent); }
+.compare-table .badge.gray  { background: var(--surface2); color: var(--text-dim); }
+
+/* LIFECYCLE STATES */
+.lifecycle { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+.lifecycle-state {
+  display: flex; gap: 16px; align-items: stretch;
+}
+.lifecycle-connector { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.lifecycle-dot {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 18px;
+  border: 2px solid;
+}
+.lifecycle-dot.green  { background: rgba(13,154,116,0.15); border-color: var(--beginner); }
+.lifecycle-dot.blue   { background: rgba(79,70,229,0.15);  border-color: var(--accent); }
+.lifecycle-dot.gray   { background: var(--surface2); border-color: var(--border-bright); }
+.lifecycle-dot.orange { background: rgba(201,122,10,0.15); border-color: var(--advanced); }
+.lifecycle-line { width: 2px; flex: 1; background: var(--border); margin: 2px auto; }
+.lifecycle-content {
+  flex: 1; padding: 14px 16px; margin: 8px 0;
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+}
+.lifecycle-content .state-name {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
+}
+.lifecycle-content .state-name.green  { color: var(--beginner); }
+.lifecycle-content .state-name.blue   { color: var(--accent); }
+.lifecycle-content .state-name.gray   { color: var(--text-dim); }
+.lifecycle-content .state-name.orange { color: var(--advanced); }
+.lifecycle-content .state-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px 0; }
+  .content { padding: 24px 20px 80px; }
+  .hero { padding: 48px 20px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar-container">
+  <div class="progress-bar-fill" id="progressBar"></div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Complete Guide · ECS Fargate · 2026</div>
+  <h1>Containers<br>on AWS</h1>
+  <p class="hero-sub">From zero to production — every step explained with real-world context.</p>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section-title">Foundations</div>
+    <a class="sidebar-link level-b active" onclick="scrollTo('s1')"><span class="dot"></span>What Are Containers?</a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s2')"><span class="dot"></span>Docker — The Packaging Tool</a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s3')"><span class="dot"></span>AWS Services Overview</a>
+
+    <div class="sidebar-section-title">AWS Services Deep Dive</div>
+    <a class="sidebar-link level-b" onclick="scrollTo('s4')"><span class="dot"></span>Amazon ECR</a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s5')"><span class="dot"></span>Amazon ECS</a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s6')"><span class="dot"></span>AWS Fargate</a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s7')"><span class="dot"></span>IAM — Permissions &amp; Roles</a>
+    <a class="sidebar-link level-b" onclick="scrollTo('s8')"><span class="dot"></span>VPC &amp; Networking</a>
+
+    <div class="sidebar-section-title">Step-by-Step Deployment</div>
+    <a class="sidebar-link level-i" onclick="scrollTo('s9')"><span class="dot"></span>Local Setup &amp; Docker Build</a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s10')"><span class="dot"></span>Push Image to ECR</a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s11')"><span class="dot"></span>Create AWS Infrastructure</a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s12')"><span class="dot"></span>Deploy to ECS Fargate</a>
+    <a class="sidebar-link level-i" onclick="scrollTo('s13')"><span class="dot"></span>Verify &amp; Access Your App</a>
+
+    <div class="sidebar-section-title">Day-2 Operations</div>
+    <a class="sidebar-link level-a" onclick="scrollTo('s14')"><span class="dot"></span>Making &amp; Deploying Changes</a>
+    <a class="sidebar-link level-a" onclick="scrollTo('s15')"><span class="dot"></span>Scaling In &amp; Out</a>
+    <a class="sidebar-link level-a" onclick="scrollTo('s16')"><span class="dot"></span>Production Best Practices</a>
+  </nav>
+
+  <main class="content">
+
+    <!-- PHASE 1 DIVIDER -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label b">Phase 1 — Foundations</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- ========== S1: WHAT ARE CONTAINERS ========== -->
+    <div class="section" id="s1" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">01</div>
+        <div class="section-title-wrap">
+          <h2>What Are Containers?</h2>
+          <span class="level-tag b">Foundations · 12 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">The Problem: "Works on My Machine"</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>You write code on your laptop. It runs perfectly. You hand it to a colleague — it crashes. You deploy to production — it crashes differently. This is the most common frustration in software development, and it has one root cause: <strong>environmental differences</strong>.</p>
+            <ul>
+              <li>Your laptop has Python 3.11 — the server has Python 3.8</li>
+              <li>You installed library version 2.3.1 — production has 1.9.0</li>
+              <li>Your OS is macOS — the server is Linux, with different file paths and system calls</li>
+              <li>Environment variables, config files, SSL certificates — all differ</li>
+            </ul>
+            <p><strong>Containers solve this entirely.</strong> A container packages your application code together with every dependency it needs — the exact Python version, the exact library versions, the config files, the runtime — into a single portable unit. If it runs in a container on your laptop, it will run identically in a container on AWS.</p>
+            <div class="tip">
+              <div class="tip-icon">✅</div>
+              <div><strong>Real-world impact:</strong> Netflix deploys thousands of independent microservices daily — each in its own container. Teams ship faster because environment parity is guaranteed. A bug reproducible in production can be reproduced exactly on any developer's laptop.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">VMs vs Containers — Apartment vs Co-Working Desk</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Before containers, the standard solution was <strong>Virtual Machines (VMs)</strong>. A VM gives each app its own complete computer — its own operating system, its own kernel, its own everything. Think of it like renting a full apartment: you own the space entirely, but it takes time to move in, costs a lot, and you're paying for rooms you never use.</p>
+            <p>A container is more like a <strong>co-working desk</strong>. You share the building's infrastructure (the OS kernel) with others, but your desk is yours — your files, your tools, your environment. Move in instantly. Pay only for what you use.</p>
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Dimension</th>
+                  <th>Virtual Machine</th>
+                  <th>Container</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Startup time</td>
+                  <td>1–5 minutes</td>
+                  <td class="good">&lt; 1 second</td>
+                </tr>
+                <tr>
+                  <td>Image size</td>
+                  <td>1–20 GB</td>
+                  <td class="good">10–200 MB</td>
+                </tr>
+                <tr>
+                  <td>OS per instance</td>
+                  <td>Full OS per VM</td>
+                  <td class="good">Shared host kernel</td>
+                </tr>
+                <tr>
+                  <td>Isolation</td>
+                  <td>Strong (hardware-level)</td>
+                  <td>Good (process-level)</td>
+                </tr>
+                <tr>
+                  <td>Portability</td>
+                  <td>Hypervisor-dependent</td>
+                  <td class="good">Runs anywhere Docker runs</td>
+                </tr>
+                <tr>
+                  <td>Resource overhead</td>
+                  <td>High — full OS per VM</td>
+                  <td class="good">Minimal — shared kernel</td>
+                </tr>
+                <tr>
+                  <td>Density</td>
+                  <td>~10s per host</td>
+                  <td class="good">100s per host</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div>VMs and containers are not mutually exclusive. In AWS, Fargate actually runs your containers <em>inside</em> a micro-VM (using Firecracker) to give you both the speed of containers and the isolation of VMs. You get the best of both worlds without managing either.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">The Shipping Container Analogy</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>In 1956, a truck driver named <strong>Malcolm McLean</strong> had a simple idea: instead of loading cargo piece by piece onto ships, what if everything went into standardized metal boxes? Longshoremen wouldn't need to know what was inside. Cranes could load any box onto any ship. Ships could dock anywhere in the world.</p>
+            <p>Shipping costs dropped by <strong>90%</strong>. Global trade transformed. The standardized shipping container is now one of the most important inventions of the 20th century.</p>
+            <p><strong>Docker did the same thing for software in 2013.</strong> Before Docker, deploying software meant hand-crafting server configurations for each environment. With Docker, you package your app into a standardized container image. That image runs identically everywhere:</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node green">MacBook Pro</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node accent">CI/CD Server</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node green">AWS Fargate</div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node orange">GCP · Azure</div>
+              </div>
+            </div>
+            <p>The same container image — no changes, no reconfiguration. The runtime handles the rest. This is why Docker's tagline is "Build once, run anywhere."</p>
+            <div class="tip">
+              <div class="tip-icon">✅</div>
+              <div>The Open Container Initiative (OCI) now standardizes container formats, so Docker images work with containerd, Podman, and other runtimes. You're not locked into Docker — the standard is open.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Images vs Containers — Recipe vs Meal</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>One of the most important distinctions in container terminology: <strong>an image is not a container</strong>. They are related but different things.</p>
+            <ul>
+              <li><strong>Image</strong> — a read-only blueprint. Like a recipe card. It defines what the container will contain: which files, which software, which configuration. You can share it, version it, store it in a registry.</li>
+              <li><strong>Container</strong> — a running instance of an image. Like the meal you cooked from the recipe. It's alive, it uses CPU and memory, it can write files. You can run 10 containers from the same image simultaneously.</li>
+            </ul>
+            <div class="diagram">
+              <div class="diagram-flow" style="flex-direction:column; gap:12px">
+                <div class="diagram-node green" style="width:260px">Dockerfile (instructions)</div>
+                <div style="color:var(--text-dim); font-size:20px">↓ <span style="font-size:13px; font-family:'JetBrains Mono',monospace">docker build</span></div>
+                <div class="diagram-node accent" style="width:260px">Image (static blueprint)</div>
+                <div style="color:var(--text-dim); font-size:20px">↓ <span style="font-size:13px; font-family:'JetBrains Mono',monospace">docker run</span></div>
+                <div class="diagram-node orange" style="width:260px">Container (running process)</div>
+              </div>
+            </div>
+            <p>You build an image once and store it. You run containers from that image as many times as needed. When a container crashes, ECS simply starts a new one from the same image — instantly, identically.</p>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s1 -->
+
+    <!-- ========== S2: DOCKER ========== -->
+    <div class="section" id="s2" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">02</div>
+        <div class="section-title-wrap">
+          <h2>Docker — The Packaging Tool</h2>
+          <span class="level-tag b">Foundations · 15 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">What Docker Is</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Docker is not a single thing — it's a toolkit with three distinct components that work together:</p>
+            <ul>
+              <li><strong>Docker Engine</strong> — the daemon that actually runs containers on your machine. It manages the container lifecycle: start, stop, pause, kill. Runs as a background service.</li>
+              <li><strong>Docker CLI</strong> — the command-line tool you interact with. Commands like <code>docker build</code>, <code>docker run</code>, <code>docker push</code>. The CLI talks to the Engine.</li>
+              <li><strong>Docker Hub</strong> — a public registry of pre-built images. Over 8 million images. When you write <code>FROM nginx:alpine</code> in a Dockerfile, Docker pulls the official nginx image from Hub automatically — no installation needed.</li>
+            </ul>
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div>In production you'll use <strong>Amazon ECR</strong> instead of Docker Hub — your own private registry inside AWS. ECR images never leave your AWS account, load faster from ECS (same region, no internet hop), and are scanned for vulnerabilities automatically.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">The Dockerfile — Our 3-Line Example</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>A Dockerfile is a plain text file that defines how to build your container image. It's a sequence of instructions — each instruction becomes a layer. Here's the complete Dockerfile for this demo:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">dockerfile</span>
+                <button class="copy-btn" onclick="copyCode(this, 'FROM nginx:alpine\nCOPY app/index.html /usr/share/nginx/html/index.html\nEXPOSE 80')">Copy</button>
+              </div>
+              <pre><span class="key">FROM</span> <span class="str">nginx:alpine</span>
+<span class="key">COPY</span> <span class="str">app/index.html</span> <span class="str">/usr/share/nginx/html/index.html</span>
+<span class="key">EXPOSE</span> <span class="num">80</span></pre>
+            </div>
+            <p>Three lines. A complete, production-deployable web server. Here's what each instruction does:</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>Instruction</th><th>What it does</th><th>Layer size</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>FROM nginx:alpine</code></td>
+                  <td>Start from the official nginx web server image, based on Alpine Linux (a 5MB minimal Linux distro). Pulls from Docker Hub. This gives you a fully configured nginx with zero setup.</td>
+                  <td>~22 MB</td>
+                </tr>
+                <tr>
+                  <td><code>COPY app/index.html ...</code></td>
+                  <td>Copy our HTML file from the local build context into the nginx serving directory inside the image. nginx serves everything in <code>/usr/share/nginx/html/</code>.</td>
+                  <td>~2 KB</td>
+                </tr>
+                <tr>
+                  <td><code>EXPOSE 80</code></td>
+                  <td>Documents that this container listens on port 80. This is metadata — it doesn't actually open the port. Port mapping happens at runtime with <code>-p 80:80</code> or via ECS task definition.</td>
+                  <td>0 B</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Key Docker Commands</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>These are the Docker commands you'll use throughout this guide. Every command is explained inline.</p>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Terminal — ~/my-app</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> docker build --platform linux/amd64 -t my-app:v1 .</div>
+                <div class="out">  # Build image from Dockerfile in current dir. Tag it my-app:v1</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker images</div>
+                <div class="out">  REPOSITORY   TAG   IMAGE ID       SIZE</div>
+                <div class="out">  my-app       v1    a3f9b2c81d4e   27.4MB</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker run -d -p 8080:80 --name my-container my-app:v1</div>
+                <div class="out">  # -d: detached (background), -p 8080:80: host:container port</div>
+                <div class="success">  ✓ Container started — visit http://localhost:8080</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker logs my-container</div>
+                <div class="out">  # View stdout/stderr from the running container</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker stop my-container</div>
+                <div class="out">  # Gracefully stop (SIGTERM, then SIGKILL after 10s)</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker rm my-container</div>
+                <div class="out">  # Delete the stopped container (image remains)</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker rmi my-app:v1</div>
+                <div class="out">  # Delete the image itself from local storage</div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">$</span> docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:v1</div>
+                <div class="out">  # Push image to Amazon ECR (after tagging and auth)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Layer Caching — Why Pushes Are Fast After the First</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Every instruction in a Dockerfile creates a <strong>layer</strong> — an immutable snapshot of the filesystem at that point. Docker caches layers. When you rebuild an image, Docker checks: has anything changed for this instruction? If not, it reuses the cached layer instead of rebuilding.</p>
+            <p>In our 3-line Dockerfile, only one layer ever changes: the <code>COPY</code> layer that contains your HTML file. The <code>FROM nginx:alpine</code> layer (22 MB) is cached forever.</p>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">docker push — second push after editing index.html</span>
+              </div>
+              <div class="terminal-body">
+                <div><span class="prompt">$</span> docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:v2</div>
+                <div class="out">  The push refers to repository [123456789.dkr.ecr.us-east-1.amazonaws.com/my-app]</div>
+                <div class="info">  html-layer: Pushing  2.048kB</div>
+                <div class="success">  html-layer: Pushed</div>
+                <div class="out">  nginx-layer: Layer already exists</div>
+                <div class="out">  alpine-layer: Layer already exists</div>
+                <div class="success">  v2: digest: sha256:a1b2c3... size: 527</div>
+              </div>
+            </div>
+            <p>Only the 2 KB HTML layer re-uploads. The 22 MB nginx base layer is already in ECR — it never re-uploads. This is why subsequent pushes take seconds, not minutes.</p>
+            <div class="tip">
+              <div class="tip-icon">✅</div>
+              <div><strong>Optimization tip:</strong> In larger Dockerfiles, put instructions that change frequently (like <code>COPY . .</code>) at the bottom, and stable instructions (like <code>RUN apt-get install</code>) at the top. This maximizes cache hits and keeps build times fast.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">5</div>
+            <div class="step-title">CRITICAL: Apple Silicon Warning</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <div class="warning">
+              <div class="tip-icon">⚠️</div>
+              <div>
+                <strong>Apple Silicon (M1/M2/M3/M4) users — read this before building anything.</strong><br><br>
+                Macs with Apple Silicon use the <strong>arm64</strong> CPU architecture. AWS Fargate (by default) runs on <strong>linux/amd64</strong> (x86_64). If you build an image on your Mac without specifying a platform, Docker builds an arm64 image. When Fargate tries to run it, you get a cryptic error: <code>exec format error</code> — the container crashes immediately on launch.<br><br>
+                <strong>Always add <code>--platform linux/amd64</code> to your build command:</strong>
+              </div>
+            </div>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this, 'docker build --platform linux/amd64 -t my-app:v1 .')">Copy</button>
+              </div>
+              <pre><span class="cmd">docker</span> build <span class="flag">--platform</span> linux/amd64 <span class="flag">-t</span> <span class="str">my-app:v1</span> .</pre>
+            </div>
+            <p>Docker Desktop on Mac uses QEMU emulation to build amd64 images transparently. It's slightly slower than native arm64 builds, but the resulting image is fully compatible with Fargate. Alternatively, configure Fargate to use <code>ARM64</code> architecture in the task definition — but then you must build arm64 images consistently.</p>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s2 -->
+
+    <!-- PHASE 2 DIVIDER -->
+    <div class="phase-divider">
+      <div class="phase-divider-line"></div>
+      <div class="phase-label b">Phase 2 — AWS Services</div>
+      <div class="phase-divider-line"></div>
+    </div>
+
+    <!-- ========== S3: AWS OVERVIEW ========== -->
+    <div class="section" id="s3" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">03</div>
+        <div class="section-title-wrap">
+          <h2>AWS Container Services Overview</h2>
+          <span class="level-tag b">AWS Services · 10 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">The Four Container Services — Which to Use When</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>AWS offers four primary container-related services. They serve different use cases and have very different complexity levels. Choosing the wrong one leads to either over-engineering or hitting limitations.</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>Service</th><th>What it does</th><th>Complexity</th><th>This demo</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Amazon ECR</td>
+                  <td>Store and version Docker images. Private registry inside your AWS account.</td>
+                  <td><span class="badge green">Low</span></td>
+                  <td><span class="badge blue">YES</span></td>
+                </tr>
+                <tr>
+                  <td>ECS + Fargate</td>
+                  <td>Run containers without managing servers. AWS handles the compute infrastructure.</td>
+                  <td><span class="badge green">Medium</span></td>
+                  <td><span class="badge blue">YES</span></td>
+                </tr>
+                <tr>
+                  <td>Amazon EKS</td>
+                  <td>Managed Kubernetes. Full control, full complexity. For large organizations with Kubernetes expertise.</td>
+                  <td><span class="badge gray">High</span></td>
+                  <td><span class="badge gray">NO</span></td>
+                </tr>
+                <tr>
+                  <td>AWS App Runner</td>
+                  <td>Fully managed — point at a container image and it handles everything including load balancing and scaling. Least control.</td>
+                  <td><span class="badge green">Very Low</span></td>
+                  <td><span class="badge gray">NO</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div><strong>The sweet spot for most teams is ECS + Fargate.</strong> More control than App Runner (custom networking, IAM, multi-container tasks), far less complexity than EKS (no Kubernetes to learn). It's what startups and enterprise teams both use at scale.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">How the Services Work Together</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>The four services in this guide form a pipeline. Your code flows from your laptop through each service until it's running and accessible to users.</p>
+            <div class="diagram">
+              <div class="diagram-flow">
+                <div class="diagram-node green" style="font-size:12px; padding:10px 14px">Your Code<br><span style="font-weight:400; color:var(--text-muted)">index.html</span></div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node accent" style="font-size:12px; padding:10px 14px">docker build<br><span style="font-weight:400; color:var(--text-muted)">creates image</span></div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node green" style="font-size:12px; padding:10px 14px">ECR<br><span style="font-weight:400; color:var(--text-muted)">stores image</span></div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node accent" style="font-size:12px; padding:10px 14px">ECS<br><span style="font-weight:400; color:var(--text-muted)">orchestrates</span></div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node orange" style="font-size:12px; padding:10px 14px">Fargate<br><span style="font-weight:400; color:var(--text-muted)">runs task</span></div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-node green" style="font-size:12px; padding:10px 14px">Users<br><span style="font-weight:400; color:var(--text-muted)">port 80</span></div>
+              </div>
+            </div>
+            <p>ECR is a storage layer. ECS is the control plane (the "brain"). Fargate is the compute layer (the "muscle"). They're designed to work together — ECS calls ECR to pull images, and calls Fargate to provision compute. You configure ECS; the rest is automated.</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Why ECS + Fargate — Who Uses It at Scale</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>The core value proposition of Fargate is <strong>zero infrastructure management</strong>. With EC2-based ECS, you provision and patch a fleet of EC2 instances, manage their capacity, handle node failures. With Fargate, you describe what you want to run (CPU, memory, image) and AWS handles every layer beneath that.</p>
+            <ul>
+              <li>No EC2 instances to provision, patch, or right-size</li>
+              <li>No cluster capacity planning — Fargate scales instantly to any workload</li>
+              <li>Pay per second — a task running for 30 seconds costs 30 seconds of compute</li>
+              <li>Scales from 1 task to thousands without any configuration changes</li>
+            </ul>
+            <div class="tip">
+              <div class="tip-icon">✅</div>
+              <div><strong>Real-world adoption:</strong> Duolingo runs all 500+ microservices on ECS Fargate. Lyft migrated from Kubernetes to ECS Fargate to reduce operational overhead. Samsung uses ECS at global scale. AWS itself runs many internal services on Fargate.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s3 -->
+
+    <!-- ========== S4: ECR ========== -->
+    <div class="section" id="s4" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">04</div>
+        <div class="section-title-wrap">
+          <h2>Amazon ECR — Your Image Registry</h2>
+          <span class="level-tag b">AWS Services · 10 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">What ECR Is</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Amazon Elastic Container Registry (ECR) is GitHub for Docker images — a fully managed service for storing, versioning, and distributing container images. Every image you build gets pushed to ECR, and ECS pulls from ECR when launching tasks.</p>
+            <p>ECR organizes images into <strong>repositories</strong> — one repository per application. Each push creates a new <strong>image tag</strong> (typically a version like <code>v1</code>, <code>v2</code>, or a git commit SHA). ECS always pulls the specific tag you specify in the task definition.</p>
+            <p>Key built-in features:</p>
+            <ul>
+              <li><strong>Image scanning</strong> — automatic vulnerability scanning using Amazon Inspector on push. Finds known CVEs in your image layers.</li>
+              <li><strong>Lifecycle policies</strong> — automatically delete images older than N days or keep only the last N versions. Prevents runaway storage costs.</li>
+              <li><strong>Cross-region replication</strong> — replicate images to multiple regions automatically for multi-region deployments.</li>
+              <li><strong>Immutable tags</strong> — optionally prevent overwriting existing tags. Enforces version discipline.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">ECR vs Docker Hub</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Docker Hub is the public default. ECR is the right choice for any professional AWS workload.</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>Dimension</th><th>Docker Hub</th><th>Amazon ECR</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Privacy</td>
+                  <td>Public by default; 1 free private repo</td>
+                  <td class="good">All repos private by default</td>
+                </tr>
+                <tr>
+                  <td>Authentication</td>
+                  <td>Docker username + password</td>
+                  <td class="good">AWS IAM — your existing access controls</td>
+                </tr>
+                <tr>
+                  <td>ECS Integration</td>
+                  <td>Manual credentials setup required</td>
+                  <td class="good">Native — zero config, same-account pull</td>
+                </tr>
+                <tr>
+                  <td>Pull latency from ECS</td>
+                  <td>Internet round-trip</td>
+                  <td class="good">Same AWS region — milliseconds</td>
+                </tr>
+                <tr>
+                  <td>Cost</td>
+                  <td>Free tier limited; paid plans for teams</td>
+                  <td>$0.10/GB/month storage; data transfer free within region</td>
+                </tr>
+                <tr>
+                  <td>Security scanning</td>
+                  <td>Basic (paid tier)</td>
+                  <td class="good">Amazon Inspector (enhanced scanning)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Pricing — Nearly Free for This Demo</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECR pricing is simple: <strong>$0.10 per GB per month</strong> for storage. Data transfer within the same AWS region (e.g., ECR to ECS in us-east-1) is free.</p>
+            <ul>
+              <li>Our nginx:alpine image: ~22 MB total</li>
+              <li>Monthly storage cost: 0.022 GB × $0.10 = <strong>$0.0022/month</strong> — effectively zero</li>
+              <li>Free tier: <strong>500 MB free</strong> for your first 12 months</li>
+              <li>Even at 50 image versions: 50 × 22 MB = 1.1 GB = $0.11/month</li>
+            </ul>
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div>Set up a lifecycle policy to auto-delete untagged images and keep only the last 10 tagged versions. This keeps storage costs near zero even on active repositories with frequent deployments.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">The Push Workflow — 3 Commands</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Pushing an image to ECR always follows the same three-step sequence: authenticate, tag, push. You do this every time you want to deploy a new version.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Step 1: Authenticate Docker to ECR (token valid 12 hours)</span>
+<span class="cmd">aws</span> ecr get-login-password <span class="flag">--region</span> us-east-1 \
+  | docker login <span class="flag">--username</span> AWS <span class="flag">--password-stdin</span> \
+    <span class="num">123456789012</span>.dkr.ecr.us-east-1.amazonaws.com
+
+<span class="cmt"># Step 2: Tag your local image with the ECR URI</span>
+<span class="cmd">docker</span> tag my-app:v1 \
+  <span class="num">123456789012</span>.dkr.ecr.us-east-1.amazonaws.com/my-app:<span class="str">v1</span>
+
+<span class="cmt"># Step 3: Push to ECR</span>
+<span class="cmd">docker</span> push \
+  <span class="num">123456789012</span>.dkr.ecr.us-east-1.amazonaws.com/my-app:<span class="str">v1</span></pre>
+            </div>
+            <p>Replace <code>123456789012</code> with your AWS Account ID and <code>us-east-1</code> with your region. After the push completes, copy the full image URI — you'll need it when creating the ECS task definition.</p>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s4 -->
+
+    <!-- ========== S5: ECS ========== -->
+    <div class="section" id="s5" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">05</div>
+        <div class="section-title-wrap">
+          <h2>Amazon ECS — The Orchestrator</h2>
+          <span class="level-tag b">AWS Services · 15 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">What ECS Does</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Amazon Elastic Container Service (ECS) is a container <strong>orchestrator</strong> — it manages the lifecycle of your containers at scale. You tell ECS what you want, and it makes it happen.</p>
+            <p>Think of ECS as a <strong>hotel manager</strong>. You tell the manager: "Keep 3 rooms occupied at all times." The manager doesn't care which specific rooms — that's their problem. If a guest (container) checks out unexpectedly (crash), the manager immediately fills the room (restarts a container). If you say "I need 10 rooms now" (scale out), the manager arranges it without you touching anything.</p>
+            <p>ECS handles:</p>
+            <ul>
+              <li>Where to run each container (which Fargate instance, which AZ)</li>
+              <li>How many copies to run (desired count)</li>
+              <li>What to do when a container crashes (automatic restart)</li>
+              <li>How to deploy new versions (rolling update, blue/green)</li>
+              <li>Health checking — replace unhealthy containers</li>
+              <li>Load balancer integration — register/deregister tasks automatically</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Core Concepts — The Hotel Analogy</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECS has five core primitives. Understanding these is essential before you can configure anything.</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>ECS Concept</th><th>Hotel Analogy</th><th>What it actually is</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Cluster</td>
+                  <td>The hotel building</td>
+                  <td>A logical grouping for your services and tasks. In Fargate mode, it's just a namespace — no servers to manage.</td>
+                </tr>
+                <tr>
+                  <td>Service</td>
+                  <td>The hotel manager</td>
+                  <td>Maintains a specified number of running tasks. Restarts tasks on failure. Handles deployments and scaling.</td>
+                </tr>
+                <tr>
+                  <td>Task Definition</td>
+                  <td>The room specification</td>
+                  <td>The blueprint: which container image, how much CPU/memory, which ports, which IAM role, environment variables. Versioned (revision 1, revision 2, etc.).</td>
+                </tr>
+                <tr>
+                  <td>Task</td>
+                  <td>An occupied room</td>
+                  <td>A running instance of a task definition. One task = one set of containers. A service runs multiple tasks for redundancy.</td>
+                </tr>
+                <tr>
+                  <td>Container</td>
+                  <td>The guest</td>
+                  <td>The actual Docker container running inside a task. One task can have multiple containers (sidecar pattern).</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div><strong>Task Definition revisions:</strong> Every time you update a task definition, ECS creates a new revision (myapp:1, myapp:2, myapp:3...). Old revisions remain available. To roll back a deployment, update the service to use an older revision — instantly.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Deployment Strategies</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECS supports three deployment strategies. Each trades off simplicity against control and risk tolerance.</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>Strategy</th><th>How it works</th><th>Zero downtime</th><th>Used by</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Rolling Update</td>
+                  <td>Gradually replace old tasks with new ones. Default strategy. Configurable min/max percentages.</td>
+                  <td class="good">Yes</td>
+                  <td>Most teams</td>
+                </tr>
+                <tr>
+                  <td>Blue/Green</td>
+                  <td>Deploy new version alongside old (two environments). Switch traffic when new version passes health checks. Instant rollback.</td>
+                  <td class="good">Yes</td>
+                  <td>Amazon.com, enterprises</td>
+                </tr>
+                <tr>
+                  <td>Canary</td>
+                  <td>Send a small % (e.g., 10%) of traffic to new version first. Validate. Then shift remaining 90%.</td>
+                  <td class="good">Yes</td>
+                  <td>Netflix, risk-sensitive teams</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Rolling Update — Zero Downtime by Default</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>When you update a service with the default rolling deployment, ECS uses two parameters to maintain availability:</p>
+            <ul>
+              <li><strong>Minimum healthy percent</strong> (default 100%) — ECS will never let your running task count drop below this percentage of desired count. At 100%, it can't kill any old tasks until new ones are running.</li>
+              <li><strong>Maximum percent</strong> (default 200%) — ECS can run up to this many tasks during deployment. At 200%, it can double the task count temporarily.</li>
+            </ul>
+            <p>Result: with defaults (min 100%, max 200%), if you have 2 running tasks, ECS starts 2 new tasks (4 total), confirms they're healthy, then terminates the 2 old tasks. Your app stays live throughout. Users never see downtime.</p>
+            <div class="tip">
+              <div class="tip-icon">✅</div>
+              <div>For this demo with 1 desired task, ECS will start the new task, wait for it to pass health checks, then stop the old one. There's a brief moment with both running. Always works — even with a single task.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s5 -->
+
+    <!-- ========== S6: FARGATE ========== -->
+    <div class="section" id="s6" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">06</div>
+        <div class="section-title-wrap">
+          <h2>AWS Fargate — Serverless Compute</h2>
+          <span class="level-tag b">AWS Services · 12 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">What Fargate Is — The Cloud Kitchen Analogy</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Imagine you want to open a restaurant. Option A: buy a building, install the kitchen equipment, hire maintenance staff, manage the lease, upgrade appliances when they break. Option B: use a <strong>cloud kitchen</strong> — send your recipes, they handle the kitchen. You pay per meal cooked.</p>
+            <p><strong>EC2-based ECS is Option A.</strong> You provision and manage EC2 instances (the kitchen). You patch them, right-size them, manage cluster capacity. When a node fails, you replace it.</p>
+            <p><strong>AWS Fargate is Option B.</strong> You provide the container image (the recipe) and a task definition (serving size, dietary requirements). AWS handles all the compute infrastructure beneath it. There are no EC2 instances visible to you — just tasks running.</p>
+            <p>What Fargate manages so you don't have to:</p>
+            <ul>
+              <li>Provisioning the underlying compute instances</li>
+              <li>OS patching and security updates</li>
+              <li>Right-sizing — you specify CPU/memory per task, not instance type</li>
+              <li>Bin-packing (fitting containers onto hosts efficiently)</li>
+              <li>Node failure recovery</li>
+              <li>Capacity planning — Fargate scales to any demand instantly</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">Fargate Pricing — Real Numbers</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Fargate charges for vCPU and memory separately, per second. There are no upfront costs, no minimum commitments. You pay only for the time your tasks are running.</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>Configuration</th><th>Cost/hour</th><th>Cost/day</th><th>Cost/month</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>0.25 vCPU / 0.5 GB</td>
+                  <td>~$0.012</td>
+                  <td>~$0.29</td>
+                  <td>~$8.80</td>
+                </tr>
+                <tr>
+                  <td><strong>0.5 vCPU / 1 GB</strong> <span class="badge blue">this demo</span></td>
+                  <td>~$0.024</td>
+                  <td>~$0.58</td>
+                  <td class="highlight">~$17.50</td>
+                </tr>
+                <tr>
+                  <td>1 vCPU / 2 GB</td>
+                  <td>~$0.049</td>
+                  <td>~$1.17</td>
+                  <td>~$35.00</td>
+                </tr>
+                <tr>
+                  <td>2 vCPU / 4 GB</td>
+                  <td>~$0.097</td>
+                  <td>~$2.33</td>
+                  <td>~$70.00</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="warning">
+              <div class="tip-icon">⚠️</div>
+              <div><strong>Remember to stop your task after this demo</strong> if you don't want to pay $17/month. A task left running costs money. Either stop the service (set desired count to 0) or delete the service entirely after the workshop.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Task Lifecycle — Every State Explained</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>When you launch or stop a Fargate task, it transitions through five states. Understanding these helps you diagnose stuck or failing tasks.</p>
+            <div class="lifecycle">
+              <div class="lifecycle-state">
+                <div class="lifecycle-connector">
+                  <div class="lifecycle-dot blue"></div>
+                  <div class="lifecycle-line"></div>
+                </div>
+                <div class="lifecycle-content">
+                  <div class="state-name blue">PROVISIONING</div>
+                  <div class="state-desc">AWS is allocating compute resources (a Firecracker microVM). Typically takes 5–30 seconds. Network interfaces are being attached, IAM credentials are being vended.</div>
+                </div>
+              </div>
+              <div class="lifecycle-state">
+                <div class="lifecycle-connector">
+                  <div class="lifecycle-dot blue"></div>
+                  <div class="lifecycle-line"></div>
+                </div>
+                <div class="lifecycle-content">
+                  <div class="state-name blue">PENDING</div>
+                  <div class="state-desc">Resources allocated. Fargate is pulling the Docker image from ECR. If your image is large or ECR auth fails, you can get stuck here. Watch for <code>CannotPullContainerError</code>.</div>
+                </div>
+              </div>
+              <div class="lifecycle-state">
+                <div class="lifecycle-connector">
+                  <div class="lifecycle-dot green"></div>
+                  <div class="lifecycle-line"></div>
+                </div>
+                <div class="lifecycle-content">
+                  <div class="state-name green">RUNNING</div>
+                  <div class="state-desc">Your container is alive and processing requests. The task stays here until you stop it, it crashes, or ECS replaces it during a deployment. This is the healthy steady state.</div>
+                </div>
+              </div>
+              <div class="lifecycle-state">
+                <div class="lifecycle-connector">
+                  <div class="lifecycle-dot orange"></div>
+                  <div class="lifecycle-line"></div>
+                </div>
+                <div class="lifecycle-content">
+                  <div class="state-name orange">STOPPING</div>
+                  <div class="state-desc">ECS sent SIGTERM to the container. Default stop timeout: 30 seconds. If your app doesn't shut down in time, SIGKILL is sent. Configure the stop timeout in the task definition for graceful shutdown.</div>
+                </div>
+              </div>
+              <div class="lifecycle-state">
+                <div class="lifecycle-connector">
+                  <div class="lifecycle-dot gray"></div>
+                </div>
+                <div class="lifecycle-content">
+                  <div class="state-name gray">STOPPED</div>
+                  <div class="state-desc">Task has exited. ECS records the stop reason and exit code. Visible in the ECS console for up to 1 hour. If the service's desired count requires it, ECS immediately starts a replacement.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Fargate vs EC2 Launch Type — When to Use Each</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div>
+                <strong>Choose Fargate when:</strong>
+                <ul style="margin-top:8px; padding-left:18px">
+                  <li>You don't want to manage EC2 instances</li>
+                  <li>Workloads are variable or unpredictable</li>
+                  <li>Tasks run intermittently (batch jobs, event-driven workloads)</li>
+                  <li>Team is small — operational simplicity matters</li>
+                  <li>You're just getting started with containers</li>
+                </ul>
+                <strong style="margin-top:12px; display:block">Choose EC2 launch type when:</strong>
+                <ul style="margin-top:8px; padding-left:18px">
+                  <li>You need GPU instances (Fargate doesn't support GPU)</li>
+                  <li>Very high steady-state workloads where Reserved Instances save cost</li>
+                  <li>You need specific instance types or custom AMIs</li>
+                  <li>Windows containers (Fargate supports Windows but with limitations)</li>
+                  <li>Strict network requirements (e.g., placement groups)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s6 -->
+
+    <!-- ========== S7: IAM ========== -->
+    <div class="section" id="s7" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">07</div>
+        <div class="section-title-wrap">
+          <h2>IAM — Permissions &amp; Roles</h2>
+          <span class="level-tag b">AWS Services · 15 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">Two Roles — Which Does What</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>ECS Fargate uses two distinct IAM roles that are often confused. Getting this wrong is the most common reason deployments fail.</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>Role</th><th>Who uses it</th><th>Required?</th><th>What it grants</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>ecsTaskExecutionRole</strong></td>
+                  <td>The ECS/Fargate infrastructure itself</td>
+                  <td class="highlight">Always required</td>
+                  <td>Pull images from ECR, write logs to CloudWatch</td>
+                </tr>
+                <tr>
+                  <td><strong>Task Role</strong></td>
+                  <td>Your application code inside the container</td>
+                  <td>Only if app needs AWS access</td>
+                  <td>Read S3, query DynamoDB, invoke Lambda, etc.</td>
+                </tr>
+              </tbody>
+            </table>
+            <p>For this demo, our nginx container just serves static HTML. It never calls any AWS API. So we need the <strong>execution role</strong> (always required) but not a task role.</p>
+            <p>If you were building an app that reads from S3 or writes to DynamoDB, you'd add a task role with those specific permissions. The app gets AWS credentials automatically via the container metadata endpoint — no secrets in the code.</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">What ecsTaskExecutionRole Grants — and Why It's #1 Mistake</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Without this role, ECS cannot pull your image from ECR and cannot write logs to CloudWatch. Tasks will fail to start with a cryptic permissions error. This is the single most common ECS mistake for people new to the service.</p>
+            <p>The role needs these exact permissions:</p>
+            <div class="skill-showcase">
+              <div class="skill-showcase-header">
+                <span>📄 AmazonECSTaskExecutionRolePolicy (AWS Managed)</span>
+              </div>
+              <div class="skill-showcase-body">
+<span class="sk-comment"># ECR permissions — pull your container image</span>
+<span class="sk-key">"ecr:GetAuthorizationToken"</span>     <span class="sk-comment"># get ECR auth token</span>
+<span class="sk-key">"ecr:BatchCheckLayerAvailability"</span>  <span class="sk-comment"># check which layers exist</span>
+<span class="sk-key">"ecr:GetDownloadUrlForLayer"</span>       <span class="sk-comment"># get presigned download URLs</span>
+<span class="sk-key">"ecr:BatchGetImage"</span>               <span class="sk-comment"># pull the image manifest</span>
+
+<span class="sk-comment"># CloudWatch Logs permissions — write container logs</span>
+<span class="sk-key">"logs:CreateLogStream"</span>            <span class="sk-comment"># create a log stream in your group</span>
+<span class="sk-key">"logs:PutLogEvents"</span>               <span class="sk-comment"># write log lines</span>
+              </div>
+            </div>
+            <div class="warning">
+              <div class="tip-icon">⚠️</div>
+              <div><strong>If your task won't start and you see "CannotPullContainerError" or "AccessDeniedException"</strong>, the execution role is the first thing to check. Verify it exists, verify ECS trusts it, verify it has the managed policy attached.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Create the Execution Role — 3 Commands</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>Creating the role requires three AWS CLI commands. First you create a trust policy document that allows ECS to assume the role, then you create the role, then you attach the managed policy.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Step 1: Create the trust policy document</span>
+<span class="cmd">cat</span> &gt; ecs-trust-policy.json &lt;&lt; <span class="str">'EOF'</span>
+{
+  <span class="str">"Version"</span>: <span class="str">"2012-10-17"</span>,
+  <span class="str">"Statement"</span>: [{
+    <span class="str">"Effect"</span>: <span class="str">"Allow"</span>,
+    <span class="str">"Principal"</span>: { <span class="str">"Service"</span>: <span class="str">"ecs-tasks.amazonaws.com"</span> },
+    <span class="str">"Action"</span>: <span class="str">"sts:AssumeRole"</span>
+  }]
+}
+<span class="str">EOF</span>
+
+<span class="cmt"># Step 2: Create the IAM role</span>
+<span class="cmd">aws</span> iam create-role \
+  <span class="flag">--role-name</span> ecsTaskExecutionRole \
+  <span class="flag">--assume-role-policy-document</span> file://ecs-trust-policy.json
+
+<span class="cmt"># Step 3: Attach the AWS managed policy</span>
+<span class="cmd">aws</span> iam attach-role-policy \
+  <span class="flag">--role-name</span> ecsTaskExecutionRole \
+  <span class="flag">--policy-arn</span> arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy</pre>
+            </div>
+            <div class="tip">
+              <div class="tip-icon">✅</div>
+              <div>You only need to create this role once per AWS account. Once created, all ECS task definitions in any cluster in that account can reference it. You don't re-create it for each service.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Verify the Role Exists</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>After creating the role, verify it exists and grab its ARN — you'll need the ARN when configuring the task definition.</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this, 'aws iam get-role --role-name ecsTaskExecutionRole --query \"Role.Arn\" --output text')">Copy</button>
+              </div>
+              <pre><span class="cmd">aws</span> iam get-role \
+  <span class="flag">--role-name</span> ecsTaskExecutionRole \
+  <span class="flag">--query</span> <span class="str">"Role.Arn"</span> \
+  <span class="flag">--output</span> text</pre>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Expected output</span>
+              </div>
+              <div class="terminal-body">
+                <div class="success">arn:aws:iam::123456789012:role/ecsTaskExecutionRole</div>
+              </div>
+            </div>
+            <p>Copy this ARN. You will paste it into the task definition as the <code>executionRoleArn</code> value. Without it, ECS will reject the task definition or fail to launch tasks.</p>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s7 -->
+
+    <!-- ========== S8: VPC & NETWORKING ========== -->
+    <div class="section" id="s8" data-level="beginner">
+      <div class="section-header">
+        <div class="step-number">08</div>
+        <div class="section-title-wrap">
+          <h2>VPC &amp; Networking</h2>
+          <span class="level-tag b">AWS Services · 12 min</span>
+        </div>
+      </div>
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step open">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">1</div>
+            <div class="step-title">VPC — Your Private Office Building</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>A <strong>Virtual Private Cloud (VPC)</strong> is your private, isolated network inside AWS. Think of it as a private office building your company rents. The building exists inside a larger complex (AWS's network), but only people with your building's access cards can get in.</p>
+            <p>Inside the VPC, everything maps to a real-world analogy:</p>
+            <table class="compare-table">
+              <thead>
+                <tr><th>VPC Component</th><th>Building Analogy</th><th>What it does</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>VPC</td>
+                  <td>The office building</td>
+                  <td>Private IP address space (e.g., 10.0.0.0/16) isolated from other AWS customers</td>
+                </tr>
+                <tr>
+                  <td>Subnet</td>
+                  <td>A floor of the building</td>
+                  <td>Subdivides the VPC. Public subnets have internet access; private subnets don't.</td>
+                </tr>
+                <tr>
+                  <td>Security Group</td>
+                  <td>Access card reader</td>
+                  <td>Stateful firewall. Controls which traffic can reach your container (inbound) and what it can reach (outbound).</td>
+                </tr>
+                <tr>
+                  <td>Internet Gateway</td>
+                  <td>The building's main entrance</td>
+                  <td>Allows traffic to flow between your VPC and the public internet.</td>
+                </tr>
+                <tr>
+                  <td>Fargate Task</td>
+                  <td>An employee at their desk</td>
+                  <td>Gets a private IP from the subnet. If in a public subnet with public IP enabled, reachable from the internet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">2</div>
+            <div class="step-title">The Default VPC — Already Ready to Use</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>AWS creates a <strong>default VPC</strong> in every region for every account. It comes pre-configured with public subnets in each Availability Zone and an internet gateway already attached. You don't need to create anything for this demo.</p>
+            <p>Verify your default VPC exists and grab its ID:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Get default VPC ID</span>
+<span class="cmd">aws</span> ec2 describe-vpcs \
+  <span class="flag">--filters</span> <span class="str">"Name=isDefault,Values=true"</span> \
+  <span class="flag">--query</span> <span class="str">"Vpcs[0].VpcId"</span> \
+  <span class="flag">--output</span> text
+
+<span class="cmt"># Get public subnet IDs in the default VPC</span>
+<span class="cmd">aws</span> ec2 describe-subnets \
+  <span class="flag">--filters</span> <span class="str">"Name=defaultForAz,Values=true"</span> \
+  <span class="flag">--query</span> <span class="str">"Subnets[*].SubnetId"</span> \
+  <span class="flag">--output</span> text</pre>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+                <span class="terminal-title">Example output</span>
+              </div>
+              <div class="terminal-body">
+                <div class="success">vpc-0a1b2c3d4e5f67890</div>
+                <div class="success">subnet-0abc1234  subnet-0def5678  subnet-0ghi9012</div>
+              </div>
+            </div>
+            <p>Save these IDs. You'll use 2–3 subnet IDs when creating the ECS service — spreading tasks across multiple subnets means they run in different Availability Zones, giving you automatic resilience.</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">3</div>
+            <div class="step-title">Security Groups — Your Container's Firewall</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <p>A security group is a stateful firewall that controls what traffic can reach your Fargate task. "Stateful" means if you allow inbound traffic on port 80, the response traffic is automatically allowed out — you don't need a separate outbound rule for responses.</p>
+            <p>For this demo, you need one security group with two rules:</p>
+            <ul>
+              <li><strong>Inbound:</strong> TCP port 80 from anywhere (0.0.0.0/0) — lets users access your app</li>
+              <li><strong>Outbound:</strong> All traffic to anywhere — required for Fargate to pull from ECR and write to CloudWatch</li>
+            </ul>
+            <div class="code-block">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              </div>
+              <pre><span class="cmt"># Create security group</span>
+<span class="cmd">aws</span> ec2 create-security-group \
+  <span class="flag">--group-name</span> <span class="str">ecs-fargate-sg</span> \
+  <span class="flag">--description</span> <span class="str">"Allow HTTP inbound for ECS Fargate"</span> \
+  <span class="flag">--vpc-id</span> vpc-0a1b2c3d4e5f67890
+
+<span class="cmt"># Add inbound rule: TCP 80 from internet</span>
+<span class="cmd">aws</span> ec2 authorize-security-group-ingress \
+  <span class="flag">--group-id</span> sg-0123456789abcdef0 \
+  <span class="flag">--protocol</span> tcp \
+  <span class="flag">--port</span> <span class="num">80</span> \
+  <span class="flag">--cidr</span> <span class="str">0.0.0.0/0</span></pre>
+            </div>
+            <div class="warning">
+              <div class="tip-icon">⚠️</div>
+              <div><strong>Never remove the outbound "all traffic" rule</strong> from a Fargate security group. Fargate tasks must be able to reach ECR (to pull images) and CloudWatch Logs (to write logs) over HTTPS. Blocking outbound traffic breaks both. This is a common misconfiguration.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <div class="step-num b">4</div>
+            <div class="step-title">Public IP vs ALB — Dev vs Production</div>
+            <div class="step-toggle">⌃</div>
+          </div>
+          <div class="step-body">
+            <div class="info-box">
+              <div class="tip-icon">💡</div>
+              <div>
+                <strong>Public IP (what we use in this demo):</strong><br>
+                Each Fargate task gets its own public IP address when launched in a public subnet with "Auto-assign public IP" enabled. Simple — no extra cost, works immediately. Two downsides: the IP changes on every task restart or redeployment, and you can't use HTTPS without extra work. Use this for <strong>development and demos only</strong>.<br><br>
+                <strong>Application Load Balancer (production):</strong><br>
+                An ALB sits in front of your ECS service and gives you a stable DNS name (e.g., <code>my-app-123456.us-east-1.elb.amazonaws.com</code>). The ALB forwards requests to your tasks; ECS automatically registers and deregisters tasks as they scale. You get HTTPS termination, health checks, multi-AZ routing, and path-based routing — all at ~$16/month base cost. Use this for any production workload.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /s8 -->
+
+    <!-- PHASE 3 DIVIDER -->
+    <div class="phase-divider"><div class="phase-divider-line"></div><div class="phase-label i">Phase 3 — Step-by-Step Deployment</div><div class="phase-divider-line"></div></div>
+
+    <!-- S9: LOCAL SETUP & DOCKER BUILD -->
+    <div class="section" id="s9">
+      <div class="section-header">
+        <div class="step-number">09</div>
+        <div class="section-title-wrap"><h2>Local Setup &amp; Docker Build</h2><span class="level-tag i">Start Here · 10 min</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">1</div><div class="step-title">Project Structure</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Your project needs two things — the HTML file and the Dockerfile. Keep them in this structure:</p>
+            <div class="file-tree">
+              <div class="folder">📁 containers/</div>
+              <div class="indent1 important">📄 Dockerfile  ← build instructions</div>
+              <div class="indent1 folder">📁 app/</div>
+              <div class="indent2 important">📄 index.html  ← your web app</div>
+            </div>
+            <div class="tip"><div class="tip-icon">✅</div><div>Always test locally before pushing to AWS. Local iteration is free and takes seconds. AWS iteration costs money and takes 30–60 seconds per cycle.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">2</div><div class="step-title">Build for the Right Architecture</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p><strong>Apple Silicon Mac (M1/M2/M3/M4) — use this command:</strong></p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'docker buildx build --platform linux/amd64 -t containers-demo:latest --load .')">Copy</button></div><pre><span class="cmd">docker buildx build</span> <span class="flag">--platform</span> <span class="str">linux/amd64</span> <span class="flag">-t</span> containers-demo:latest <span class="flag">--load</span> .</pre></div>
+            <p><strong>Intel Mac / Linux — standard build:</strong></p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'docker build -t containers-demo:latest .')">Copy</button></div><pre><span class="cmd">docker build</span> <span class="flag">-t</span> containers-demo:latest .</pre></div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>Apple Silicon builds <strong>arm64</strong> by default. Fargate runs <strong>x86_64 (amd64)</strong>. Mixing causes <code>exec format error</code> — the container crashes immediately on startup with exit code 255. Always use <code>--platform linux/amd64</code>.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">3</div><div class="step-title">Test Locally Before Pushing</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Always verify the container works on your laptop before pushing to AWS:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'docker run -d -p 8080:80 --name demo-local containers-demo:latest\ncurl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:8080\ndocker stop demo-local && docker rm demo-local')">Copy</button></div><pre><span class="cmt"># Run the container</span>
+<span class="cmd">docker run</span> <span class="flag">-d</span> <span class="flag">-p</span> 8080:80 <span class="flag">--name</span> demo-local containers-demo:latest
+
+<span class="cmt"># Verify HTTP 200</span>
+<span class="cmd">curl</span> <span class="flag">-s -o</span> /dev/null <span class="flag">-w</span> <span class="str">"HTTP %{http_code}"</span> http://localhost:8080
+
+<span class="cmt"># Stop and clean up</span>
+<span class="cmd">docker stop</span> demo-local &amp;&amp; <span class="cmd">docker rm</span> demo-local</pre></div>
+            <div class="terminal"><div class="terminal-bar"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div><span class="terminal-title">Terminal</span></div><div class="terminal-body"><div><span class="prompt">$</span> curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:8080</div><div class="success">HTTP 200 ← container is healthy and serving</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S10: PUSH TO ECR -->
+    <div class="section" id="s10">
+      <div class="section-header">
+        <div class="step-number">10</div>
+        <div class="section-title-wrap"><h2>Push Image to ECR</h2><span class="level-tag i">Upload to AWS · 5 min</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">1</div><div class="step-title">Create ECR Repository</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Create a private repository to store your image. You only do this once per app.</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws ecr create-repository --repository-name containers-demo --region us-east-1 --query \"repository.repositoryUri\" --output text')">Copy</button></div><pre><span class="cmd">aws ecr create-repository</span> \
+  <span class="flag">--repository-name</span> containers-demo \
+  <span class="flag">--region</span> us-east-1 \
+  <span class="flag">--query</span> <span class="str">"repository.repositoryUri"</span> <span class="flag">--output</span> text</pre></div>
+            <div class="terminal"><div class="terminal-bar"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div><span class="terminal-title">Terminal</span></div><div class="terminal-body"><div class="success">123456789012.dkr.ecr.us-east-1.amazonaws.com/containers-demo</div></div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">2</div><div class="step-title">Authenticate, Tag &amp; Push</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Three commands — authenticate Docker to ECR, tag your image with the ECR address, then upload it:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)\nREGION=us-east-1\n\n# Authenticate (token valid 12 hours)\naws ecr get-login-password --region $REGION \\\n  | docker login --username AWS --password-stdin \\\n    $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\n\n# Tag your image with the ECR URI\ndocker tag containers-demo:latest \\\n  $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest\n\n# Push (only changed layers upload)\nHTTPS_PROXY=\"\" HTTP_PROXY=\"\" NO_PROXY=\"*\" \\\n  docker push $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest')">Copy</button></div><pre><span class="key">AWS_ACCOUNT_ID</span>=$(<span class="cmd">aws sts get-caller-identity</span> <span class="flag">--query</span> Account <span class="flag">--output</span> text)
+<span class="key">REGION</span>=us-east-1
+
+<span class="cmt"># 1. Authenticate Docker to ECR (token valid 12 hours)</span>
+<span class="cmd">aws ecr get-login-password</span> <span class="flag">--region</span> $REGION \
+  | <span class="cmd">docker login</span> <span class="flag">--username</span> AWS <span class="flag">--password-stdin</span> \
+    $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+<span class="cmt"># 2. Tag with ECR address</span>
+<span class="cmd">docker tag</span> containers-demo:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest
+
+<span class="cmt"># 3. Push (proxy bypass if Docker Desktop proxy issue)</span>
+HTTPS_PROXY=<span class="str">""</span> HTTP_PROXY=<span class="str">""</span> NO_PROXY=<span class="str">"*"</span> \
+  <span class="cmd">docker push</span> $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo:latest</pre></div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>If you see <code>proxyconnect tcp: i/o timeout</code> — Docker Desktop has an internal proxy blocking ECR. Prepend <code>HTTPS_PROXY="" HTTP_PROXY="" NO_PROXY="*"</code> to the push command to bypass it.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S11: CREATE AWS INFRASTRUCTURE -->
+    <div class="section" id="s11">
+      <div class="section-header">
+        <div class="step-number">11</div>
+        <div class="section-title-wrap"><h2>Create AWS Infrastructure</h2><span class="level-tag i">One-Time Setup · 5 min</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">1</div><div class="step-title">Everything You Need — Checklist</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Create these resources once. They persist across all your deployments.</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>ecsTaskExecutionRole</strong> — IAM role that lets ECS pull from ECR and write logs</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>ECR repository</strong> — private image registry</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>ECS cluster</strong> — logical grouping for your services</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>Security group</strong> — firewall allowing port 80 inbound</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span><strong>CloudWatch log group</strong> — where container logs land</li>
+            </ul>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">2</div><div class="step-title">Create All Infrastructure — CLI</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)\nREGION=us-east-1\n\n# IAM Task Execution Role\ncat > /tmp/ecs-trust.json << EOF\n{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}\nEOF\naws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document file:///tmp/ecs-trust.json\naws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy\n\n# ECS Cluster\naws ecs create-cluster --cluster-name containers-demo-cluster --region $REGION\n\n# Security Group\nVPC_ID=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query \"Vpcs[0].VpcId\" --output text)\nSG_ID=$(aws ec2 create-security-group --group-name containers-demo-sg --description \"HTTP 80\" --vpc-id $VPC_ID --query GroupId --output text)\naws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 80 --cidr 0.0.0.0/0\necho \"SG: $SG_ID\"\n\n# CloudWatch Log Group\naws logs create-log-group --log-group-name /ecs/containers-demo-task --region $REGION\necho \"Done\"')">Copy</button></div><pre><span class="key">AWS_ACCOUNT_ID</span>=$(<span class="cmd">aws sts get-caller-identity</span> <span class="flag">--query</span> Account <span class="flag">--output</span> text)
+<span class="key">REGION</span>=us-east-1
+
+<span class="cmt"># IAM Task Execution Role</span>
+<span class="cmd">cat</span> > /tmp/ecs-trust.json &lt;&lt; <span class="str">EOF</span>
+<span class="str">{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}</span>
+EOF
+<span class="cmd">aws iam create-role</span> <span class="flag">--role-name</span> ecsTaskExecutionRole \
+  <span class="flag">--assume-role-policy-document</span> file:///tmp/ecs-trust.json
+<span class="cmd">aws iam attach-role-policy</span> <span class="flag">--role-name</span> ecsTaskExecutionRole \
+  <span class="flag">--policy-arn</span> <span class="str">arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy</span>
+
+<span class="cmt"># ECS Cluster</span>
+<span class="cmd">aws ecs create-cluster</span> <span class="flag">--cluster-name</span> containers-demo-cluster <span class="flag">--region</span> $REGION
+
+<span class="cmt"># Security Group (port 80 inbound)</span>
+<span class="key">VPC_ID</span>=$(<span class="cmd">aws ec2 describe-vpcs</span> <span class="flag">--filters</span> Name=isDefault,Values=true \
+  <span class="flag">--query</span> <span class="str">"Vpcs[0].VpcId"</span> <span class="flag">--output</span> text)
+<span class="key">SG_ID</span>=$(<span class="cmd">aws ec2 create-security-group</span> <span class="flag">--group-name</span> containers-demo-sg \
+  <span class="flag">--description</span> <span class="str">"HTTP 80"</span> <span class="flag">--vpc-id</span> $VPC_ID <span class="flag">--query</span> GroupId <span class="flag">--output</span> text)
+<span class="cmd">aws ec2 authorize-security-group-ingress</span> <span class="flag">--group-id</span> $SG_ID \
+  <span class="flag">--protocol</span> tcp <span class="flag">--port</span> <span class="num">80</span> <span class="flag">--cidr</span> 0.0.0.0/0
+<span class="cmd">echo</span> <span class="str">"SG: $SG_ID"</span>
+
+<span class="cmt"># CloudWatch Log Group</span>
+<span class="cmd">aws logs create-log-group</span> <span class="flag">--log-group-name</span> /ecs/containers-demo-task <span class="flag">--region</span> $REGION</pre></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">3</div><div class="step-title">Register Task Definition</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>The task definition tells ECS: which image to run, how much CPU/memory, which ports to expose, and where to send logs.</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws ecs register-task-definition \\\n  --family containers-demo-task \\\n  --network-mode awsvpc \\\n  --requires-compatibilities FARGATE \\\n  --cpu \"512\" --memory \"1024\" \\\n  --execution-role-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/ecsTaskExecutionRole \\\n  --container-definitions \'[{\"name\":\"web\",\"image\":\"\'$AWS_ACCOUNT_ID\'.dkr.ecr.us-east-1.amazonaws.com/containers-demo:latest\",\"portMappings\":[{\"containerPort\":80}],\"essential\":true,\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"/ecs/containers-demo-task\",\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"ecs\"}}}]\'')">Copy</button></div><pre><span class="cmd">aws ecs register-task-definition</span> \
+  <span class="flag">--family</span> containers-demo-task \
+  <span class="flag">--network-mode</span> awsvpc \
+  <span class="flag">--requires-compatibilities</span> FARGATE \
+  <span class="flag">--cpu</span> <span class="str">"512"</span> <span class="flag">--memory</span> <span class="str">"1024"</span> \
+  <span class="flag">--execution-role-arn</span> arn:aws:iam::$AWS_ACCOUNT_ID:role/ecsTaskExecutionRole \
+  <span class="flag">--container-definitions</span> <span class="str">'[{
+    "name": "web",
+    "image": "'$AWS_ACCOUNT_ID'.dkr.ecr.us-east-1.amazonaws.com/containers-demo:latest",
+    "portMappings": [{"containerPort": 80}],
+    "essential": true,
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/containers-demo-task",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }]'</span></pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S12: DEPLOY TO ECS FARGATE -->
+    <div class="section" id="s12">
+      <div class="section-header">
+        <div class="step-number">12</div>
+        <div class="section-title-wrap"><h2>Deploy to ECS Fargate</h2><span class="level-tag i">Launch · 2 min</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">1</div><div class="step-title">Create the ECS Service</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>The service is the long-running manager that keeps your desired number of tasks running. Get your subnet IDs first, then create the service:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws ecs create-service \\\n  --cluster containers-demo-cluster \\\n  --service-name containers-demo-service \\\n  --task-definition containers-demo-task:1 \\\n  --desired-count 1 \\\n  --launch-type FARGATE \\\n  --network-configuration \"awsvpcConfiguration={subnets=[subnet-xxx,subnet-yyy],securityGroups=[$SG_ID],assignPublicIp=ENABLED}\"')">Copy</button></div><pre><span class="cmd">aws ecs create-service</span> \
+  <span class="flag">--cluster</span> containers-demo-cluster \
+  <span class="flag">--service-name</span> containers-demo-service \
+  <span class="flag">--task-definition</span> containers-demo-task:1 \
+  <span class="flag">--desired-count</span> <span class="num">1</span> \
+  <span class="flag">--launch-type</span> FARGATE \
+  <span class="flag">--network-configuration</span> <span class="str">"awsvpcConfiguration={
+    subnets=[subnet-xxx,subnet-yyy],
+    securityGroups=[$SG_ID],
+    assignPublicIp=ENABLED
+  }"</span></pre></div>
+            <div class="tip"><div class="tip-icon">✅</div><div><code>assignPublicIp=ENABLED</code> is required for public access. Without it the task has no public IP and is unreachable from the internet.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">2</div><div class="step-title">Watch the Task Start</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Poll the task status — it moves through three states before serving traffic:</p>
+            <div class="terminal"><div class="terminal-bar"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div><span class="terminal-title">Terminal — task lifecycle</span></div><div class="terminal-body"><div><span class="prompt">$</span> aws ecs describe-tasks ... --query "tasks[0].lastStatus"</div><div class="info">"PROVISIONING"  ← AWS allocating Fargate compute (~10s)</div><div class="info">"PENDING"       ← pulling image from ECR (~15-30s)</div><div class="success">"RUNNING"       ← container is live and serving ✓</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S13: VERIFY & ACCESS -->
+    <div class="section" id="s13">
+      <div class="section-header">
+        <div class="step-number">13</div>
+        <div class="section-title-wrap"><h2>Verify &amp; Access Your App</h2><span class="level-tag i">Go Live</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">1</div><div class="step-title">Get the Public IP</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Fargate assigns a public IP via an Elastic Network Interface (ENI). Three API calls to retrieve it:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'TASK_ARN=$(aws ecs list-tasks --cluster containers-demo-cluster --service-name containers-demo-service --query \"taskArns[0]\" --output text)\n\nENI_ID=$(aws ecs describe-tasks --cluster containers-demo-cluster --tasks $TASK_ARN --query \"tasks[0].attachments[0].details[?name==\'networkInterfaceId\'].value\" --output text)\n\nPUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI_ID --query \"NetworkInterfaces[0].Association.PublicIp\" --output text)\n\necho \"App live at: http://$PUBLIC_IP\"')">Copy</button></div><pre><span class="key">TASK_ARN</span>=$(<span class="cmd">aws ecs list-tasks</span> \
+  <span class="flag">--cluster</span> containers-demo-cluster \
+  <span class="flag">--service-name</span> containers-demo-service \
+  <span class="flag">--query</span> <span class="str">"taskArns[0]"</span> <span class="flag">--output</span> text)
+
+<span class="key">ENI_ID</span>=$(<span class="cmd">aws ecs describe-tasks</span> \
+  <span class="flag">--cluster</span> containers-demo-cluster <span class="flag">--tasks</span> $TASK_ARN \
+  <span class="flag">--query</span> <span class="str">"tasks[0].attachments[0].details[?name=='networkInterfaceId'].value"</span> \
+  <span class="flag">--output</span> text)
+
+<span class="key">PUBLIC_IP</span>=$(<span class="cmd">aws ec2 describe-network-interfaces</span> \
+  <span class="flag">--network-interface-ids</span> $ENI_ID \
+  <span class="flag">--query</span> <span class="str">"NetworkInterfaces[0].Association.PublicIp"</span> <span class="flag">--output</span> text)
+
+<span class="cmd">echo</span> <span class="str">"App live at: http://$PUBLIC_IP"</span></pre></div>
+            <div class="info-box"><div class="tip-icon">💡</div><div><strong>Why 3 API calls?</strong> Fargate doesn't expose the IP directly on the task. The IP lives on the ENI (network card) that AWS attaches to the task. You follow the chain: task → ENI ID → public IP.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">2</div><div class="step-title">IP Changes on Every Redeploy</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Every time ECS replaces a Fargate task (redeploy, crash restart, scale event), the new task gets a new ENI and a new public IP. The old IP immediately becomes unreachable.</p>
+            <div class="warning"><div class="tip-icon">⚠️</div><div><strong>This is why you need an ALB in production.</strong> An Application Load Balancer has a fixed DNS name (<code>myapp.us-east-1.elb.amazonaws.com</code>) that never changes regardless of how many tasks come and go behind it. Direct public IPs are for dev/testing only.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num i">3</div><div class="step-title">View Container Logs</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Since you have no SSH access to Fargate, CloudWatch Logs is your window into the container. View logs in real time:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'aws logs tail /ecs/containers-demo-task --follow --region us-east-1')">Copy</button></div><pre><span class="cmd">aws logs tail</span> /ecs/containers-demo-task <span class="flag">--follow</span> <span class="flag">--region</span> us-east-1</pre></div>
+            <div class="tip"><div class="tip-icon">✅</div><div>If a task stops immediately after starting, check logs first: <code>aws logs tail /ecs/containers-demo-task --region us-east-1</code>. The error is almost always there — bad image URI, wrong port, missing file, or architecture mismatch.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 DIVIDER -->
+    <div class="phase-divider"><div class="phase-divider-line"></div><div class="phase-label a">Phase 4 — Day-2 Operations</div><div class="phase-divider-line"></div></div>
+
+    <!-- S14: MAKING & DEPLOYING CHANGES -->
+    <div class="section" id="s14">
+      <div class="section-header">
+        <div class="step-number">14</div>
+        <div class="section-title-wrap"><h2>Making &amp; Deploying Changes</h2><span class="level-tag a">Operations</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">1</div><div class="step-title">The Change → Deploy Workflow</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Every code change follows the same 4-step loop:</p>
+            <div class="diagram"><div class="diagram-flow"><div class="diagram-node">Edit index.html</div><div class="diagram-arrow">→</div><div class="diagram-node green">docker build (--no-cache)</div><div class="diagram-arrow">→</div><div class="diagram-node accent">docker push to ECR</div><div class="diagram-arrow">→</div><div class="diagram-node orange">ECS update-service</div></div></div>
+            <p style="margin-top:12px">Wait ~30 seconds, then refresh the browser. ECS performs a rolling replacement — new task starts, traffic shifts, old task drains and stops. Zero downtime.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">2</div><div class="step-title">Full Redeploy Script</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Save this as <code>redeploy.sh</code> and run it after every change. It handles build, push, and deployment atomically — pinning to the exact image digest to avoid ECS caching issues:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, '#!/bin/bash\nset -e\n\nAWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)\nREGION=us-east-1\nECR_URI=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo\n\n# 1. Build fresh — --no-cache prevents Docker serving stale layers\ndocker buildx build --no-cache --platform linux/amd64 -t containers-demo:latest --load .\n\n# 2. Tag and push\ndocker tag containers-demo:latest $ECR_URI:latest\nHTTPS_PROXY=\"\" HTTP_PROXY=\"\" NO_PROXY=\"*\" docker push $ECR_URI:latest\n\n# 3. Get the new image digest\nDIGEST=$(aws ecr describe-images --repository-name containers-demo \\\n  --image-ids imageTag=latest \\\n  --query \"imageDetails[0].imageDigest\" --output text)\n\n# 4. Register new task definition pinned to exact digest\naws ecs register-task-definition \\\n  --family containers-demo-task \\\n  --network-mode awsvpc \\\n  --requires-compatibilities FARGATE \\\n  --cpu \"512\" --memory \"1024\" \\\n  --execution-role-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/ecsTaskExecutionRole \\\n  --container-definitions \"[{\\\"name\\\":\\\"web\\\",\\\"image\\\":\\\"$ECR_URI@$DIGEST\\\",\\\"portMappings\\\":[{\\\"containerPort\\\":80}],\\\"essential\\\":true,\\\"logConfiguration\\\":{\\\"logDriver\\\":\\\"awslogs\\\",\\\"options\\\":{\\\"awslogs-group\\\":\\\"/ecs/containers-demo-task\\\",\\\"awslogs-region\\\":\\\"$REGION\\\",\\\"awslogs-stream-prefix\\\":\\\"ecs\\\"}}}]\"\n\n# 5. Get the new revision\nREVISION=$(aws ecs describe-task-definition --task-definition containers-demo-task \\\n  --query \"taskDefinition.revision\" --output text)\n\n# 6. Update service to use new revision\naws ecs update-service \\\n  --cluster containers-demo-cluster \\\n  --service containers-demo-service \\\n  --task-definition containers-demo-task:$REVISION \\\n  --region $REGION\n\necho \"Deployed revision $REVISION — live in ~30 seconds.\"')">Copy</button></div><pre><span class="cmt">#!/bin/bash</span>
+<span class="key">set</span> -e
+
+<span class="key">AWS_ACCOUNT_ID</span>=$(<span class="cmd">aws sts get-caller-identity</span> <span class="flag">--query</span> Account <span class="flag">--output</span> text)
+<span class="key">REGION</span>=us-east-1
+<span class="key">ECR_URI</span>=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/containers-demo
+
+<span class="cmt"># 1. Build fresh — --no-cache prevents stale layer caching</span>
+<span class="cmd">docker buildx build</span> <span class="flag">--no-cache --platform</span> linux/amd64 <span class="flag">-t</span> containers-demo:latest <span class="flag">--load</span> .
+
+<span class="cmt"># 2. Tag and push to ECR</span>
+<span class="cmd">docker tag</span> containers-demo:latest $ECR_URI:latest
+HTTPS_PROXY=<span class="str">""</span> HTTP_PROXY=<span class="str">""</span> NO_PROXY=<span class="str">"*"</span> <span class="cmd">docker push</span> $ECR_URI:latest
+
+<span class="cmt"># 3. Get the exact image digest (avoids :latest caching issues)</span>
+<span class="key">DIGEST</span>=$(<span class="cmd">aws ecr describe-images</span> <span class="flag">--repository-name</span> containers-demo \
+  <span class="flag">--image-ids</span> imageTag=latest \
+  <span class="flag">--query</span> <span class="str">"imageDetails[0].imageDigest"</span> <span class="flag">--output</span> text)
+
+<span class="cmt"># 4. Register new task definition pinned to exact digest</span>
+<span class="cmd">aws ecs register-task-definition</span> <span class="flag">--family</span> containers-demo-task \
+  <span class="flag">--network-mode</span> awsvpc <span class="flag">--requires-compatibilities</span> FARGATE \
+  <span class="flag">--cpu</span> <span class="str">"512"</span> <span class="flag">--memory</span> <span class="str">"1024"</span> \
+  <span class="flag">--execution-role-arn</span> arn:aws:iam::$AWS_ACCOUNT_ID:role/ecsTaskExecutionRole \
+  <span class="flag">--container-definitions</span> <span class="str">"[{\"name\":\"web\",\"image\":\"$ECR_URI@$DIGEST\",...}]"</span>
+
+<span class="cmt"># 5. Get new revision and deploy</span>
+<span class="key">REVISION</span>=$(<span class="cmd">aws ecs describe-task-definition</span> <span class="flag">--task-definition</span> containers-demo-task \
+  <span class="flag">--query</span> <span class="str">"taskDefinition.revision"</span> <span class="flag">--output</span> text)
+<span class="cmd">aws ecs update-service</span> <span class="flag">--cluster</span> containers-demo-cluster \
+  <span class="flag">--service</span> containers-demo-service \
+  <span class="flag">--task-definition</span> containers-demo-task:$REVISION
+
+<span class="cmd">echo</span> <span class="str">"Deployed revision $REVISION — live in ~30 seconds."</span></pre></div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div><strong>Always use <code>--no-cache</code></strong> when building for deployment. Without it, Docker may serve a cached layer that doesn't include your HTML change — the image looks new (new digest) but serves old content. We hit this exact issue in our testing session.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">3</div><div class="step-title">Why Pin to Image Digest, Not :latest</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Using <code>:latest</code> in task definitions is a common mistake. ECS can cache the old image and deploy it even after you push a new one to ECR. Pinning to the exact SHA digest guarantees ECS pulls exactly the image you just built:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, '# BAD — ECS may cache and not pull the new image\n\"image\": \"123456789012.dkr.ecr.us-east-1.amazonaws.com/containers-demo:latest\"\n\n# GOOD — ECS must pull exactly this image, no caching possible\n\"image\": \"123456789012.dkr.ecr.us-east-1.amazonaws.com/containers-demo@sha256:376ddff...\"')">Copy</button></div><pre><span class="cmt"># BAD — ECS may serve the old cached image</span>
+<span class="str">"image"</span>: <span class="str">"123456789012.dkr.ecr.us-east-1.amazonaws.com/containers-demo:latest"</span>
+
+<span class="cmt"># GOOD — ECS must pull exactly this image, no caching possible</span>
+<span class="str">"image"</span>: <span class="str">"123456789012.dkr.ecr.us-east-1.amazonaws.com/containers-demo@sha256:376ddff..."</span></pre></div>
+            <div class="info-box"><div class="tip-icon">💡</div><div>In production, use <strong>git commit SHA as the image tag</strong>: <code>docker build -t myapp:$(git rev-parse --short HEAD) .</code> — every deployment is fully traceable and you can roll back to any previous version instantly.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S15: SCALING -->
+    <div class="section" id="s15">
+      <div class="section-header">
+        <div class="step-number">15</div>
+        <div class="section-title-wrap"><h2>Scaling In &amp; Out</h2><span class="level-tag a">Operations</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">1</div><div class="step-title">Manual Scaling</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>The simplest scaling — change the desired task count. ECS starts or stops tasks immediately:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, '# Scale OUT — run 3 tasks\naws ecs update-service --cluster containers-demo-cluster --service containers-demo-service --desired-count 3 --region us-east-1\n\n# Scale IN — back to 1\naws ecs update-service --cluster containers-demo-cluster --service containers-demo-service --desired-count 1 --region us-east-1\n\n# Scale to 0 — stop all tasks (no charges, service stays intact)\naws ecs update-service --cluster containers-demo-cluster --service containers-demo-service --desired-count 0 --region us-east-1')">Copy</button></div><pre><span class="cmt"># Scale OUT — run 3 tasks (~$0.072/hr total)</span>
+<span class="cmd">aws ecs update-service</span> <span class="flag">--cluster</span> containers-demo-cluster \
+  <span class="flag">--service</span> containers-demo-service <span class="flag">--desired-count</span> <span class="num">3</span>
+
+<span class="cmt"># Scale IN — back to 1 task</span>
+<span class="cmd">aws ecs update-service</span> <span class="flag">--cluster</span> containers-demo-cluster \
+  <span class="flag">--service</span> containers-demo-service <span class="flag">--desired-count</span> <span class="num">1</span>
+
+<span class="cmt"># Scale to 0 — stop all tasks, no compute charges</span>
+<span class="cmd">aws ecs update-service</span> <span class="flag">--cluster</span> containers-demo-cluster \
+  <span class="flag">--service</span> containers-demo-service <span class="flag">--desired-count</span> <span class="num">0</span></pre></div>
+            <div class="tip"><div class="tip-icon">✅</div><div>Real-world: Duolingo scales non-critical ECS services to 0 overnight and back up in the morning. Saves ~60% on compute costs for batch/background services.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">2</div><div class="step-title">Auto Scaling on CPU</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Configure ECS to automatically add tasks when CPU exceeds 70% and remove them when load drops. Real-world use: a daily 9am traffic spike automatically triggers scale-out without any human intervention.</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, '# Register service as auto-scaling target (min 1, max 10 tasks)\naws application-autoscaling register-scalable-target \\\n  --service-namespace ecs \\\n  --resource-id service/containers-demo-cluster/containers-demo-service \\\n  --scalable-dimension ecs:service:DesiredCount \\\n  --min-capacity 1 \\\n  --max-capacity 10\n\n# Scale when average CPU > 70%\naws application-autoscaling put-scaling-policy \\\n  --service-namespace ecs \\\n  --resource-id service/containers-demo-cluster/containers-demo-service \\\n  --scalable-dimension ecs:service:DesiredCount \\\n  --policy-name cpu-target-tracking \\\n  --policy-type TargetTrackingScaling \\\n  --target-tracking-scaling-policy-configuration \'{\"TargetValue\":70.0,\"PredefinedMetricSpecification\":{\"PredefinedMetricType\":\"ECSServiceAverageCPUUtilization\"},\"ScaleOutCooldown\":60,\"ScaleInCooldown\":300}\'')">Copy</button></div><pre><span class="cmt"># 1. Register as scalable target (min 1, max 10 tasks)</span>
+<span class="cmd">aws application-autoscaling register-scalable-target</span> \
+  <span class="flag">--service-namespace</span> ecs \
+  <span class="flag">--resource-id</span> service/containers-demo-cluster/containers-demo-service \
+  <span class="flag">--scalable-dimension</span> ecs:service:DesiredCount \
+  <span class="flag">--min-capacity</span> <span class="num">1</span> <span class="flag">--max-capacity</span> <span class="num">10</span>
+
+<span class="cmt"># 2. Scale out when CPU > 70%, scale in when CPU drops</span>
+<span class="cmd">aws application-autoscaling put-scaling-policy</span> \
+  <span class="flag">--service-namespace</span> ecs \
+  <span class="flag">--resource-id</span> service/containers-demo-cluster/containers-demo-service \
+  <span class="flag">--scalable-dimension</span> ecs:service:DesiredCount \
+  <span class="flag">--policy-name</span> cpu-target-tracking \
+  <span class="flag">--policy-type</span> TargetTrackingScaling \
+  <span class="flag">--target-tracking-scaling-policy-configuration</span> <span class="str">'{
+    "TargetValue": 70.0,
+    "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+    },
+    "ScaleOutCooldown": 60,
+    "ScaleInCooldown": 300
+  }'</span></pre></div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>Always set a <strong>max-capacity</strong>. Without it, a traffic spike or runaway bug could spin up hundreds of tasks and generate a massive unexpected bill.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">3</div><div class="step-title">Scaling Cost Impact</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Fargate scales linearly — 10 tasks costs exactly 10x one task:</p>
+            <table><thead><tr><th>Tasks</th><th>vCPU</th><th>Memory</th><th>Cost/hour</th><th>Cost/month (24/7)</th></tr></thead><tbody>
+              <tr><td>1</td><td>0.5</td><td>1 GB</td><td>$0.024</td><td>~$17.50</td></tr>
+              <tr><td>3</td><td>1.5</td><td>3 GB</td><td>$0.072</td><td>~$52.50</td></tr>
+              <tr><td>5</td><td>2.5</td><td>5 GB</td><td>$0.120</td><td>~$87.50</td></tr>
+              <tr><td>10</td><td>5.0</td><td>10 GB</td><td>$0.240</td><td>~$175.00</td></tr>
+            </tbody></table>
+            <div class="info-box"><div class="tip-icon">💡</div><div>With auto-scaling, you only pay for the tasks actually running. At off-peak hours (2am) you might run 1 task. At peak (9am) you might run 8 tasks. Your monthly bill reflects actual usage, not peak capacity.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S16: PRODUCTION BEST PRACTICES -->
+    <div class="section" id="s16">
+      <div class="section-header">
+        <div class="step-number">16</div>
+        <div class="section-title-wrap"><h2>Production Best Practices</h2><span class="level-tag a">Advanced</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">1</div><div class="step-title">Use an Application Load Balancer (ALB)</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>The single most important production upgrade. Direct public IPs change on every task replacement. An ALB gives you a fixed DNS name that never changes and unlocks HTTPS, health checks, and zero-downtime deployments.</p>
+            <table><thead><tr><th>Feature</th><th>Direct Public IP</th><th>ALB</th></tr></thead><tbody>
+              <tr><td>DNS/Address</td><td>Changes on every deploy</td><td>Fixed forever</td></tr>
+              <tr><td>HTTPS/TLS</td><td>No</td><td>Yes (free with ACM)</td></tr>
+              <tr><td>Health checks</td><td>No</td><td>Yes — auto-replace unhealthy tasks</td></tr>
+              <tr><td>Multi-AZ</td><td>No</td><td>Yes — automatic</td></tr>
+              <tr><td>Zero-downtime deploy</td><td>No</td><td>Yes — connection draining</td></tr>
+              <tr><td>Cost</td><td>Free</td><td>~$16/month + $0.008/LCU</td></tr>
+            </tbody></table>
+            <div class="tip"><div class="tip-icon">✅</div><div>Used by every production ECS deployment at AWS, Airbnb, Lyft, and Spotify. If your app is public-facing, you need an ALB.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">2</div><div class="step-title">Never Use :latest in Production</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Use git commit SHA as image tags. Every deployment is traceable, rollback is instant:</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, 'GIT_SHA=$(git rev-parse --short HEAD)\ndocker build --platform linux/amd64 -t myapp:$GIT_SHA .\ndocker push $ECR_URI:$GIT_SHA\n\n# Task definition uses specific SHA\n\"image\": \"123456789012.dkr.ecr.us-east-1.amazonaws.com/myapp:abc1234\"')">Copy</button></div><pre><span class="key">GIT_SHA</span>=$(<span class="cmd">git rev-parse</span> <span class="flag">--short</span> HEAD)
+<span class="cmd">docker build</span> <span class="flag">--platform</span> linux/amd64 <span class="flag">-t</span> myapp:$GIT_SHA .
+<span class="cmd">docker push</span> $ECR_URI:$GIT_SHA
+
+<span class="cmt"># Task definition uses specific SHA — fully traceable</span>
+<span class="str">"image"</span>: <span class="str">"123456789012.dkr.ecr.us-east-1.amazonaws.com/myapp:abc1234"</span></pre></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">3</div><div class="step-title">Store Secrets in AWS Secrets Manager</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Never put passwords, API keys, or DB credentials in environment variables as plain text. They appear in CloudWatch logs, ECS console, and CI/CD outputs.</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this, '# Store secret\naws secretsmanager create-secret \\\n  --name prod/myapp/db-password \\\n  --secret-string \"mysupersecretpassword\"\n\n# Reference in task definition container definition\n\"secrets\": [{\n  \"name\": \"DB_PASSWORD\",\n  \"valueFrom\": \"arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/myapp/db-password\"\n}]')">Copy</button></div><pre><span class="cmt"># Store secret — never visible in plain text</span>
+<span class="cmd">aws secretsmanager create-secret</span> \
+  <span class="flag">--name</span> <span class="str">prod/myapp/db-password</span> \
+  <span class="flag">--secret-string</span> <span class="str">"mysupersecretpassword"</span>
+
+<span class="cmt"># Reference in task definition — ECS injects at runtime</span>
+<span class="str">"secrets"</span>: [{
+  <span class="str">"name"</span>: <span class="str">"DB_PASSWORD"</span>,
+  <span class="str">"valueFrom"</span>: <span class="str">"arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/myapp/db-password"</span>
+}]</pre></div>
+            <div class="warning"><div class="tip-icon">⚠️</div><div>ECS injects the secret as an environment variable at runtime — it's never stored in the task definition or visible in the console. The container sees it as a normal env var.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">4</div><div class="step-title">Add Health Checks</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Without health checks, ECS considers a task healthy as long as the container process is running — even if it's serving 500 errors. With health checks, ECS auto-replaces unhealthy tasks.</p>
+            <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this, '\"healthCheck\": {\n  \"command\": [\"CMD-SHELL\", \"curl -f http://localhost/ || exit 1\"],\n  \"interval\": 30,\n  \"timeout\": 5,\n  \"retries\": 3,\n  \"startPeriod\": 10\n}')">Copy</button></div><pre>{
+  <span class="key">"healthCheck"</span>: {
+    <span class="key">"command"</span>: [<span class="str">"CMD-SHELL"</span>, <span class="str">"curl -f http://localhost/ || exit 1"</span>],
+    <span class="key">"interval"</span>: <span class="num">30</span>,
+    <span class="key">"timeout"</span>: <span class="num">5</span>,
+    <span class="key">"retries"</span>: <span class="num">3</span>,
+    <span class="key">"startPeriod"</span>: <span class="num">10</span>
+  }
+}</pre></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">5</div><div class="step-title">CI/CD Pipeline — The Full Production Flow</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>In production, nobody manually runs <code>docker build</code> on their laptop. Every change goes through an automated pipeline:</p>
+            <div class="diagram"><div class="diagram-flow"><div class="diagram-node">git push</div><div class="diagram-arrow">→</div><div class="diagram-node green">CodePipeline triggers</div><div class="diagram-arrow">→</div><div class="diagram-node green">CodeBuild: docker build + push ECR</div><div class="diagram-arrow">→</div><div class="diagram-node accent">ECS update-service</div><div class="diagram-arrow">→</div><div class="diagram-node orange">Rolling deploy → Live</div></div></div>
+            <div class="info-box" style="margin-top:14px"><div class="tip-icon">💡</div><div>This is how Netflix, Amazon, Spotify, and every major tech company deploys. Push code → pipeline handles the rest. No manual steps, no human error, full audit trail.</div></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)"><div class="step-num a">6</div><div class="step-title">Cleanup — Full Destroy Order</div><div class="step-toggle">⌃</div></div>
+          <div class="step-body">
+            <p>Delete resources in this exact order — AWS dependency rules require it:</p>
+            <ul class="checklist">
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Scale service to 0: <code>--desired-count 0</code></li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Delete ECS service</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Deregister task definitions</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Delete ECS cluster</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Delete ECR repository (<code>--force</code>)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Delete CloudWatch log group</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Delete security group (after tasks stopped)</li>
+              <li><span class="check-box" onclick="toggleCheck(this)"></span>Detach IAM policy, then delete role</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /layout -->
+
+<script>
+function toggleStep(header) {
+  const step = header.parentElement;
+  step.classList.toggle('open');
+}
+
+function filterLevel(level) {
+  document.querySelectorAll('.level-pill').forEach(p => p.classList.remove('active'));
+  if (level === 'all') {
+    document.querySelector('.level-pill.all-btn').classList.add('active');
+  } else {
+    document.querySelector(`.level-pill.${level}`).classList.add('active');
+  }
+  document.querySelectorAll('.section').forEach(s => {
+    if (level === 'all') {
+      s.classList.remove('hidden');
+    } else {
+      s.classList.toggle('hidden', s.dataset.level !== level);
+    }
+  });
+  document.querySelectorAll('.phase-divider').forEach(d => {
+    d.style.display = level === 'all' ? 'flex' : 'none';
+  });
+}
+
+function copyCode(btn, text) {
+  if (!text) {
+    const pre = btn.closest('.code-block, .skill-showcase')?.querySelector('pre, .skill-showcase-body');
+    text = pre ? pre.innerText : '';
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+window.addEventListener('scroll', () => {
+  const fill = document.getElementById('progressBar');
+  if (fill) {
+    const pct = Math.min(100, (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    fill.style.width = pct + '%';
+  }
+});
+
+const sections = document.querySelectorAll('.section[id]');
+const sidebarLinks = document.querySelectorAll('.sidebar-link');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      sidebarLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('onclick')?.includes(id));
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+
+document.querySelectorAll('.steps .step:first-child').forEach(step => {
+  step.classList.add('open');
+});
+</script>
+</body>
+</html>
